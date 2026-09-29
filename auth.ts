@@ -1,105 +1,61 @@
-import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
-import { isAllowedGoogleProfile, resolveRole, resolveTech } from "@/lib/auth-domain";
+import { normalizeUsername, verifyPassword } from "@/lib/password";
+import { lockedFor, recordFailure, recordSuccess } from "@/lib/login-guard";
 
-const tempEnabled =
-  process.env.ALLOW_TEMP_LOGIN === "true" && process.env.NODE_ENV !== "production";
+/** Surfaces as /signin?error=CredentialsSignin&code=locked */
+class LockedOut extends CredentialsSignin {
+  code = "locked";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 12 * 60 * 60 }, // one working day
   pages: { signIn: "/signin" },
   // Required when deployed behind a reverse proxy (any non-Vercel host);
   // the app is only ever reached via the org's own trusted host.
   trustHost: true,
   providers: [
-    Google({
-      authorization: { params: { hd: process.env.ALLOWED_DOMAIN, prompt: "select_account" } },
+    Credentials({
+      name: "Username and password",
+      credentials: { username: {}, password: {} },
+      authorize: async (c) => {
+        const username = normalizeUsername(String(c?.username ?? ""));
+        const password = String(c?.password ?? "");
+        if (!username || !password) return null;
+        if (lockedFor(username) > 0) throw new LockedOut();
+
+        const user = await prisma.user.findUnique({
+          where: { username },
+          select: { id: true, name: true, passwordHash: true, active: true },
+        });
+        // verifyPassword runs even when there's no user, so timing doesn't reveal which usernames exist.
+        const ok = await verifyPassword(password, user?.passwordHash);
+        if (!user || !ok || !user.active) {
+          recordFailure(username);
+          return null;
+        }
+        recordSuccess(username);
+        return { id: user.id, name: user.name };
+      },
     }),
-    ...(tempEnabled
-      ? [
-          Credentials({
-            name: "Temp Login",
-            credentials: { username: {}, password: {} },
-            authorize: (c) => {
-              if (!c?.username || !c?.password) return null;
-              if (
-                process.env.TEMP_LOGIN_USER &&
-                process.env.TEMP_LOGIN_PASSWORD &&
-                c.username === process.env.TEMP_LOGIN_USER &&
-                c.password === process.env.TEMP_LOGIN_PASSWORD
-              ) {
-                return {
-                  id: "temp",
-                  email: "temp@local.dev",
-                  name: "Temp User",
-                  role: process.env.TEMP_LOGIN_ROLE ?? "MANAGER",
-                } as any;
-              }
-              if (
-                process.env.TEMP_STAFF_USER &&
-                process.env.TEMP_STAFF_PASSWORD &&
-                c.username === process.env.TEMP_STAFF_USER &&
-                c.password === process.env.TEMP_STAFF_PASSWORD
-              ) {
-                return {
-                  id: "temp-staff",
-                  email: "staff@local.dev",
-                  name: "Test Staff",
-                  role: "EMPLOYEE",
-                } as any;
-              }
-              return null;
-            },
-          }),
-        ]
-      : []),
   ],
   callbacks: {
-    async signIn({ account, profile, user }) {
-      if (account?.provider === "credentials") {
-        if (!tempEnabled || !user?.email) return false;
-        // Give each temp login a real User row so FK-backed writes
-        // (activities, locks) work exactly as they do for Google users.
-        const role = ((user as any).role === "EMPLOYEE" ? "EMPLOYEE" : "MANAGER") as
-          | "EMPLOYEE"
-          | "MANAGER";
-        await prisma.user.upsert({
-          where: { email: user.email },
-          update: { role },
-          create: { email: user.email, name: user.name ?? "Temp User", role },
-        });
-        return true;
-      }
-      if (account?.provider === "google") {
-        if (!isAllowedGoogleProfile(profile as any)) return false;
-        const email = profile!.email!;
-        const role = resolveRole(email, process.env.MANAGER_EMAILS ?? "");
-        await prisma.user.upsert({
-          where: { email },
-          update: { name: profile!.name ?? email, role },
-          create: { email, name: profile!.name ?? email, role },
-        });
-        return true;
-      }
-      return false;
-    },
     async jwt({ token, user }) {
-      if (user) {
-        if (token.email) {
-          const db = await prisma.user.findUnique({ where: { email: token.email } });
-          if (db) {
-            token.uid = db.id;
-            token.role = db.role;
-            token.designation = db.designation;
-            token.name = db.name;
-          }
-        }
-      }
-      // Re-resolved every request (env-only, no DB) so removing someone from
-      // TECH_EMAILS revokes ticket access immediately, not at next sign-in.
-      token.tech = resolveTech((token.email as string) ?? "", process.env.TECH_EMAILS ?? "");
+      if (user?.id) token.uid = user.id;
+      if (!token.uid) return null;
+      // Re-read the account on every request so switching someone off, or
+      // changing their role or ticket access, applies immediately.
+      const db = await prisma.user.findUnique({
+        where: { id: token.uid as string },
+        select: { name: true, role: true, designation: true, tech: true, active: true, passwordHash: true },
+      });
+      // No password = not a real login (e.g. a session left over from the old Google/test sign-in): end it.
+      if (!db || !db.active || !db.passwordHash) return null;
+      token.name = db.name;
+      token.role = db.role;
+      token.designation = db.designation;
+      token.tech = db.tech;
       return token;
     },
     async session({ session, token }) {

@@ -16,7 +16,7 @@ G-TEC Education internal staff, on a mix of office desktops and phones (mobile m
 One internal place for daily work reporting and the tech complaint queue. Success: employees log their day in under a minute, managers see who submitted and what's pending at a glance, and no complaint ticket goes quiet or gets duplicated.
 
 ## Operating Context
-- Sign-in via Google, restricted to gteceducation.com accounts; roles resolved from env allow-lists (MANAGER_EMAILS, TECH_EMAILS).
+- Sign-in with username + password stored in the database (scrypt-hashed; 5 wrong attempts lock a username for 15 min). Managers create accounts, reset passwords, set role and tech-desk access, and switch accounts off from Manager → Team; everyone changes their own password from the account menu. First manager is created with scripts/create-user.mjs.
 - Dates and times are IST (Asia/Kolkata). Ticket numbers are shown as T-numbers.
 - Managers export filtered activity to Excel for review.
 - Solved tickets hand off to WhatsApp (wa.me link with a prefilled message).

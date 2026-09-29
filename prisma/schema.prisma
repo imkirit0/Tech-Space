@@ -20,7 +20,15 @@ enum Status {
 
 model User {
   id          String     @id @default(cuid())
-  email       String     @unique
+  email        String?    @unique
+  // Login ID, stored lowercase. Null = account can't sign in (legacy/seed rows).
+  username     String?    @unique
+  // scrypt hash: "scrypt$<salt hex>$<key hex>" (see lib/password.ts).
+  passwordHash String?
+  // Access to the tech ticket desk.
+  tech         Boolean    @default(false)
+  // Switched-off accounts can't sign in; their history stays.
+  active       Boolean    @default(true)
   name        String
   designation String?
   phone       String?    // WhatsApp number, normalised to digits with country code (e.g. 919847012345)

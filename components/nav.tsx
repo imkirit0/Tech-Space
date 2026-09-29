@@ -45,14 +45,17 @@ export async function Board({
 
   const links: { href: string; label: string; badge?: number }[] =
     u.role === "MANAGER"
-      ? [{ href: "/manager", label: "Manager" }]
+      ? [
+          { href: "/manager", label: "Manager" },
+          { href: "/manager/team", label: "Team" },
+        ]
       : [
           { href: "/dashboard", label: "Dashboard" },
           { href: "/activities", label: "My Activities" },
         ];
   const [unreadTasks, me] = await Promise.all([
     unreadTaskCount(u),
-    prisma.user.findUnique({ where: { id: u.id }, select: { phone: true } }),
+    prisma.user.findUnique({ where: { id: u.id }, select: { phone: true, username: true } }),
   ]);
   const phone = me?.phone ?? null;
   links.push({ href: "/tasks", label: "Tasks", badge: unreadTasks });
@@ -78,11 +81,12 @@ export async function Board({
           <div className="flex items-center gap-1">
             <PhoneDialog
               userId={u.id}
+              username={me?.username ?? null}
               phone={phone}
               trigger={
                 <button
                   type="button"
-                  title={phone ? "Your WhatsApp number" : "Add your WhatsApp number"}
+                  title={phone ? "Your account" : "Your account: add your WhatsApp number"}
                   className="flex items-center gap-2.5 rounded-md py-1 pr-2 pl-1 text-left transition-colors hover:bg-white/10 focus-visible:ring-3 focus-visible:ring-white/40 focus-visible:outline-none"
                 >
                   <span className="relative flex size-8 items-center justify-center rounded-full bg-board-well text-xs font-semibold ring-1 ring-board-line">
@@ -104,7 +108,7 @@ export async function Board({
                       )}
                     </span>
                   </span>
-                  <span className="sr-only sm:hidden">{phone ? "Your WhatsApp number" : "Add your WhatsApp number"}</span>
+                  <span className="sr-only sm:hidden">Your account</span>
                 </button>
               }
             />

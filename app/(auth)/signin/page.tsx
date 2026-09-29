@@ -1,6 +1,7 @@
 import Image from "next/image";
-import { AuthError } from "next-auth";
+import { AuthError, CredentialsSignin } from "next-auth";
 import { redirect } from "next/navigation";
+import { LogIn } from "lucide-react";
 import { signIn } from "@/auth";
 import { getCurrentUser } from "@/lib/session";
 import { Button } from "@/components/ui/button";
@@ -10,15 +11,7 @@ import { LedClock } from "@/components/led-clock";
 
 export const metadata = { title: "Sign in" };
 
-const tempLoginEnabled =
-  process.env.ALLOW_TEMP_LOGIN === "true" && process.env.NODE_ENV !== "production";
-
-async function signInWithGoogle() {
-  "use server";
-  await signIn("google", { redirectTo: "/" });
-}
-
-async function signInWithTempCredentials(formData: FormData) {
+async function signInWithPassword(formData: FormData) {
   "use server";
   try {
     await signIn("credentials", {
@@ -28,13 +21,17 @@ async function signInWithTempCredentials(formData: FormData) {
     });
   } catch (error) {
     // Auth.js throws a NEXT_REDIRECT "error" on success — it must propagate.
-    // Only AuthError (bad credentials) is ours to handle.
-    if (error instanceof AuthError) {
-      redirect("/signin?error=1");
-    }
+    // Only AuthError (bad credentials / locked) is ours to handle.
+    if (error instanceof CredentialsSignin && error.code === "locked") redirect("/signin?error=locked");
+    if (error instanceof AuthError) redirect("/signin?error=invalid");
     throw error;
   }
 }
+
+const MESSAGES: Record<string, string> = {
+  invalid: "That username and password don't match, or the account is switched off.",
+  locked: "Too many wrong attempts. Wait 15 minutes, or ask a manager to reset your password.",
+};
 
 export default async function SignInPage({
   searchParams,
@@ -43,7 +40,6 @@ export default async function SignInPage({
 }) {
   const { error } = await searchParams;
   if (await getCurrentUser()) redirect("/");
-  const domain = process.env.ALLOWED_DOMAIN || "gteceducation.com";
 
   return (
     <div className="flex min-h-svh flex-col bg-board text-board-foreground">
@@ -68,50 +64,38 @@ export default async function SignInPage({
 
         <div className="w-full rounded-xl bg-card p-6 text-card-foreground shadow-[0_24px_60px_-20px_rgb(0_0_0/0.6)] sm:p-8 lg:max-w-sm">
           <h2 className="text-xl font-semibold tracking-tight">Sign in</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Use your {domain} Google account.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Use the username and password your manager gave you.</p>
 
           {error && (
             <p role="alert" className="mt-5 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-800">
-              {error === "AccessDenied"
-                ? `Only ${domain} Google accounts can sign in. Switch accounts and try again.`
-                : error === "1"
-                  ? "That username and password didn't match. Try again."
-                  : "Sign-in didn't complete. Please try again."}
+              {MESSAGES[error] ?? "Sign-in didn't complete. Please try again."}
             </p>
           )}
 
-          <form action={signInWithGoogle} className="mt-6">
-            <Button type="submit" size="lg" className="h-11 w-full text-[0.95rem]">
-              <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
-                <path
-                  fill="currentColor"
-                  d="M21.35 11.1H12v2.9h5.35c-.5 2.5-2.6 3.9-5.35 3.9a6 6 0 1 1 0-12c1.5 0 2.9.55 3.95 1.55l2.2-2.2A9 9 0 1 0 12 21c5.2 0 8.85-3.65 8.85-8.8 0-.4-.05-.75-.1-1.1Z"
-                />
-              </svg>
-              Continue with Google
+          <form action={signInWithPassword} className="mt-6 flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                name="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                autoFocus
+                className="h-10"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" name="password" type="password" autoComplete="current-password" required className="h-10" />
+            </div>
+            <Button type="submit" size="lg" className="mt-1 h-11 w-full text-[0.95rem]">
+              <LogIn />
+              Sign in
             </Button>
           </form>
-
-          {tempLoginEnabled && (
-            <details className="group mt-6 border-t pt-4">
-              <summary className="cursor-pointer text-sm font-medium text-muted-foreground select-none hover:text-foreground">
-                Test login (development only)
-              </summary>
-              <form action={signInWithTempCredentials} className="mt-4 flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="username">Username</Label>
-                  <Input id="username" name="username" autoComplete="username" required />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" name="password" type="password" autoComplete="current-password" required />
-                </div>
-                <Button type="submit" variant="outline" className="w-full">
-                  Sign in with test account
-                </Button>
-              </form>
-            </details>
-          )}
+          <p className="mt-5 text-xs text-muted-foreground">Forgot your password? Ask a manager to reset it from the Team page.</p>
         </div>
       </div>
       <p className="px-5 pb-6 text-center text-xs text-board-muted">G-TEC Education · internal use only</p>
