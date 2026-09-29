@@ -5,27 +5,51 @@ export const STATUSES = ["PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"] as co
 export type ActivityStatus = (typeof STATUSES)[number];
 
 export function statusLabel(status: ActivityStatus): string {
-  return status.replace("_", " ");
+  return { PENDING: "Pending", IN_PROGRESS: "In progress", COMPLETED: "Completed", ON_HOLD: "On hold" }[status];
 }
 
-const STATUS_STYLES: Record<ActivityStatus, string> = {
-  COMPLETED: "bg-emerald-50 text-emerald-800 ring-emerald-600/20",
-  IN_PROGRESS: "bg-sky-50 text-sky-800 ring-sky-600/20",
-  PENDING: "bg-amber-50 text-amber-800 ring-amber-600/25",
-  ON_HOLD: "bg-slate-100 text-slate-600 ring-slate-500/20",
+/*
+ * One state vocabulary for the whole app: a lamp plus a word.
+ * amber = waiting, navy = in hand, green = done, slate = parked,
+ * violet = with someone else, red = urgent / brand only.
+ */
+export const LAMP = {
+  amber: { dot: "bg-amber-500", chip: "bg-amber-50 text-amber-900" },
+  blue: { dot: "bg-primary", chip: "bg-accent text-accent-foreground" },
+  green: { dot: "bg-emerald-600", chip: "bg-emerald-50 text-emerald-900" },
+  slate: { dot: "bg-slate-400", chip: "bg-slate-100 text-slate-700" },
+  violet: { dot: "bg-violet-600", chip: "bg-violet-50 text-violet-900" },
+  red: { dot: "bg-red-600", chip: "bg-red-50 text-red-800" },
+} as const;
+export type Lamp = keyof typeof LAMP;
+
+export function LampBadge({ lamp, children, className }: { lamp: Lamp; children: React.ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+        LAMP[lamp].chip,
+        className
+      )}
+    >
+      <span className={cn("size-1.5 shrink-0 rounded-full", LAMP[lamp].dot)} aria-hidden />
+      {children}
+    </span>
+  );
+}
+
+const STATUS_LAMP: Record<ActivityStatus, Lamp> = {
+  PENDING: "amber",
+  IN_PROGRESS: "blue",
+  COMPLETED: "green",
+  ON_HOLD: "slate",
 };
 
 export function StatusBadge({ status, className }: { status: ActivityStatus; className?: string }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset",
-        STATUS_STYLES[status],
-        className
-      )}
-    >
+    <LampBadge lamp={STATUS_LAMP[status]} className={className}>
       {statusLabel(status)}
-    </span>
+    </LampBadge>
   );
 }
 
@@ -33,9 +57,10 @@ export function LockedBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-500/20 ring-inset",
+        "inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-slate-700",
         className
       )}
+      title="This reporting period is locked by a manager"
     >
       <Lock className="size-3" aria-hidden />
       Locked

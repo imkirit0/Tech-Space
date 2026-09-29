@@ -1,15 +1,24 @@
-import { requireUser } from "@/lib/session";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { todayISO, dateToISO } from "@/lib/dates";
 import { isLocked } from "@/lib/period-lock";
-import { Nav } from "@/components/nav";
+import { formatHours } from "@/lib/hours";
+import { Board } from "@/components/nav";
+import { Section } from "@/components/section";
+import { AddActivityDialog } from "@/components/add-activity-dialog";
 import { ActivityHistory } from "@/components/activity-history";
 
+export const metadata = { title: "My Activities" };
+
 export default async function ActivitiesPage() {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) redirect("/signin");
+  const today = todayISO();
+  const month = today.slice(0, 7);
 
   const [activities, locks] = await Promise.all([
-    prisma.activity.findMany({ where: { userId: user.id }, orderBy: { date: "desc" } }),
+    prisma.activity.findMany({ where: { userId: user.id }, orderBy: [{ date: "desc" }, { createdAt: "asc" }] }),
     prisma.periodLock.findMany({ select: { startDate: true, endDate: true } }),
   ]);
 
@@ -28,17 +37,28 @@ export default async function ActivitiesPage() {
     };
   });
 
+  const thisMonth = rows.filter((r) => r.date.startsWith(month));
+  const monthHours = thisMonth.reduce((s, r) => s + r.timeTaken, 0);
+  const daysLogged = new Set(thisMonth.map((r) => r.date)).size;
+  const monthName = new Date(`${today}T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", timeZone: "UTC" });
+
   return (
     <div className="flex min-h-svh flex-col">
-      <Nav />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My Activities</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Your full history. Entries in a locked reporting period are read-only.
-          </p>
-        </div>
-        <ActivityHistory rows={rows} maxDate={todayISO()} />
+      <Board
+        title="My Activities"
+        subtitle="Your full history. Entries in a locked reporting period are read-only."
+        action={<AddActivityDialog maxDate={today} />}
+        counters={[
+          { label: `Hours in ${monthName}`, value: formatHours(monthHours), digits: 5, tone: "white" },
+          { label: `Days logged in ${monthName}`, value: daysLogged, digits: 2, tone: "white" },
+          { label: "All-time entries", value: rows.length, digits: 4, tone: "white" },
+          { label: "Locked", value: rows.filter((r) => r.locked).length, digits: 4, tone: "white" },
+        ]}
+      />
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+        <Section flush>
+          <ActivityHistory rows={rows} maxDate={today} />
+        </Section>
       </main>
     </div>
   );

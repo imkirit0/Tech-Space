@@ -14,16 +14,19 @@ import {
 } from "@/components/ui/select";
 import { STATUSES, statusLabel } from "@/components/status-badge";
 
+const TEXT_KEYS = ["employeeName", "designation", "assignedBy", "dateFrom", "dateTo", "search"] as const;
+
 export function ActivityFilters() {
   const router = useRouter();
   const params = useSearchParams();
   const [status, setStatus] = useState(params.get("status") ?? "ALL");
+  const active = [...TEXT_KEYS, "status"].filter((k) => params.get(k)).length;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const qs = new URLSearchParams();
-    for (const key of ["employeeName", "designation", "assignedBy", "dateFrom", "dateTo", "search"]) {
+    for (const key of TEXT_KEYS) {
       const value = String(form.get(key) ?? "").trim();
       if (value) qs.set(key, value);
     }
@@ -32,23 +35,33 @@ export function ActivityFilters() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
+    <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-3 lg:col-span-2">
+        <Label htmlFor="search">Search</Label>
+        <Input
+          id="search"
+          name="search"
+          type="search"
+          defaultValue={params.get("search") ?? ""}
+          placeholder="Words in the activity or details"
+        />
+      </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="employeeName">Employee</Label>
-        <Input id="employeeName" name="employeeName" defaultValue={params.get("employeeName") ?? ""} className="w-40" />
+        <Input id="employeeName" name="employeeName" defaultValue={params.get("employeeName") ?? ""} />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="designation">Designation</Label>
-        <Input id="designation" name="designation" defaultValue={params.get("designation") ?? ""} className="w-40" />
+        <Input id="designation" name="designation" defaultValue={params.get("designation") ?? ""} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="status">Status</Label>
+        <Label htmlFor="filter-status">Status</Label>
         <Select value={status} onValueChange={(v) => setStatus(v ?? "ALL")}>
-          <SelectTrigger id="status" className="w-40">
-            <SelectValue />
+          <SelectTrigger id="filter-status" className="w-full">
+            <SelectValue>{(v: string) => (v === "ALL" ? "All statuses" : statusLabel(v as never))}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All</SelectItem>
+            <SelectItem value="ALL">All statuses</SelectItem>
             {STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {statusLabel(s)}
@@ -58,26 +71,26 @@ export function ActivityFilters() {
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="assignedBy">Assigned By</Label>
-        <Input id="assignedBy" name="assignedBy" defaultValue={params.get("assignedBy") ?? ""} className="w-40" />
+        <Label htmlFor="filter-assignedBy">Assigned by</Label>
+        <Input id="filter-assignedBy" name="assignedBy" defaultValue={params.get("assignedBy") ?? ""} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="dateFrom">Date From</Label>
+        <Label htmlFor="dateFrom">From</Label>
         <Input id="dateFrom" name="dateFrom" type="date" defaultValue={params.get("dateFrom") ?? ""} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="dateTo">Date To</Label>
+        <Label htmlFor="dateTo">To</Label>
         <Input id="dateTo" name="dateTo" type="date" defaultValue={params.get("dateTo") ?? ""} />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="search">Search</Label>
-        <Input id="search" name="search" defaultValue={params.get("search") ?? ""} className="w-40" />
-      </div>
-      <div className="flex gap-2">
-        <Button type="submit">Apply</Button>
-        <Button type="button" variant="outline" onClick={() => router.push("/manager")}>
-          Clear
+      <div className="col-span-full flex items-end gap-2 sm:justify-end">
+        <Button type="submit" className="flex-1 sm:flex-none">
+          Apply filters
         </Button>
+        {active > 0 && (
+          <Button type="button" variant="outline" onClick={() => router.push("/manager")}>
+            Clear {active}
+          </Button>
+        )}
       </div>
     </form>
   );

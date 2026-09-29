@@ -8,13 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   TICKET_SOURCES,
   TICKET_PRIORITIES,
   TICKET_CATEGORIES,
@@ -25,17 +18,58 @@ import {
 } from "@/components/ticket-badges";
 import { uploadAttachments } from "@/app/tickets/actions";
 import type { TicketInput } from "@/lib/validation";
+import { cn } from "@/lib/utils";
 
 type Props = {
   action: (input: TicketInput) => Promise<{ ok: true; id: string } | { ok: false; error: string }>;
   onSuccess?: () => void;
 };
 
+const optional = <span className="font-normal text-muted-foreground">(optional)</span>;
+
+/** A row of one-tap choices (native radios, so keyboard and forms just work). */
+export function Choice<T extends string>({
+  name,
+  legend,
+  options,
+  defaultValue,
+  tone,
+}: {
+  name: string;
+  legend: string;
+  options: readonly T[];
+  defaultValue: T;
+  tone?: Partial<Record<T, string>>;
+}) {
+  return (
+    <fieldset className="flex min-w-0 flex-col">
+      <legend className="mb-1.5 text-sm leading-none font-medium">{legend}</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) => (
+          <label
+            key={o}
+            className={cn(
+              "flex min-h-9 cursor-pointer items-center rounded-lg border bg-card px-3 text-sm transition-colors hover:bg-muted",
+              "has-checked:border-primary has-checked:bg-accent has-checked:font-medium has-checked:text-accent-foreground",
+              "has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+              tone?.[o]
+            )}
+          >
+            <input type="radio" name={name} value={o} defaultChecked={o === defaultValue} className="sr-only" />
+            {fmtLabel(o)}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+const PRIORITY_TONE: Partial<Record<TicketPriority, string>> = {
+  URGENT: "has-checked:border-red-600 has-checked:bg-red-50 has-checked:text-red-800",
+};
+
 export function TicketForm({ action, onSuccess }: Props) {
   const router = useRouter();
-  const [source, setSource] = useState<TicketSource>("PHONE");
-  const [priority, setPriority] = useState<TicketPriority>("MEDIUM");
-  const [category, setCategory] = useState<TicketCategory>("TECH");
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -50,11 +84,11 @@ export function TicketForm({ action, onSuccess }: Props) {
       contactName: String(form.get("contactName") ?? ""),
       contactPhone: String(form.get("contactPhone") ?? ""),
       branch: String(form.get("branch") ?? "") || undefined,
-      source,
-      priority,
+      source: String(form.get("source") ?? "PHONE") as TicketSource,
+      priority: String(form.get("priority") ?? "MEDIUM") as TicketPriority,
       ipAddress: String(form.get("ipAddress") ?? "") || undefined,
       assetId: String(form.get("assetId") ?? "") || undefined,
-      category,
+      category: String(form.get("category") ?? "TECH") as TicketCategory,
     };
 
     setPending(true);
@@ -62,7 +96,7 @@ export function TicketForm({ action, onSuccess }: Props) {
     try {
       result = await action(input);
     } catch {
-      toast.error("Request failed — your session may have expired. Refresh the page.");
+      toast.error("Couldn't create the ticket. Your session may have expired, so refresh the page.");
       setPending(false);
       return;
     }
@@ -81,124 +115,90 @@ export function TicketForm({ action, onSuccess }: Props) {
         const uploadResult = await uploadAttachments(result.id, fd);
         if (!uploadResult.ok) {
           uploadFailed = true;
-          toast.error(`Ticket created, but attachment failed: ${uploadResult.error}`);
+          toast.error(`Ticket created, but the attachment failed: ${uploadResult.error}`);
         }
       } catch {
         uploadFailed = true;
-        toast.error("Ticket created, but attachment upload failed — your session may have expired.");
+        toast.error("Ticket created, but the attachment upload failed. Your session may have expired.");
       }
     }
     setPending(false);
 
     if (!uploadFailed) toast.success("Ticket created");
     formEl.reset();
-    setSource("PHONE");
-    setPriority("MEDIUM");
-    setCategory("TECH");
     router.refresh();
     onSuccess?.();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="title">Title</Label>
-        <Input id="title" name="title" required />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="description">Description</Label>
-        <Textarea id="description" name="description" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <fieldset className="flex flex-col gap-3">
+        <legend className="sr-only">The problem</legend>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="contactName">Contact Name</Label>
-          <Input id="contactName" name="contactName" required />
+          <Label htmlFor="title">What's the problem?</Label>
+          <Input id="title" name="title" required minLength={3} autoFocus placeholder="e.g. Lab 2 printer not printing" />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="contactPhone">Contact Phone</Label>
-          <Input id="contactPhone" name="contactPhone" inputMode="tel" required />
+          <Label htmlFor="description">Details {optional}</Label>
+          <Textarea id="description" name="description" rows={2} placeholder="Error messages, what was tried already…" />
         </div>
-      </div>
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <Choice name="priority" legend="Priority" options={TICKET_PRIORITIES} defaultValue="MEDIUM" tone={PRIORITY_TONE} />
+          <Choice name="category" legend="Category" options={TICKET_CATEGORIES} defaultValue="TECH" />
+        </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="branch">Branch</Label>
-        <Input id="branch" name="branch" />
-      </div>
+      <fieldset className="flex flex-col gap-3 border-t pt-4">
+        <legend className="float-left mb-3 w-full text-xs font-semibold text-muted-foreground">Who reported it</legend>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="contactName">Name</Label>
+            <Input id="contactName" name="contactName" required autoComplete="off" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="contactPhone">Phone</Label>
+            <Input id="contactPhone" name="contactPhone" type="tel" inputMode="tel" required placeholder="10-digit mobile" />
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="branch">Branch {optional}</Label>
+            <Input id="branch" name="branch" />
+          </div>
+          <Choice name="source" legend="Came in via" options={TICKET_SOURCES} defaultValue="PHONE" />
+        </div>
+      </fieldset>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="source">Source</Label>
-          <Select value={source} onValueChange={(v) => setSource(v as TicketSource)}>
-            <SelectTrigger id="source" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TICKET_SOURCES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {fmtLabel(s)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="priority">Priority</Label>
-          <Select value={priority} onValueChange={(v) => setPriority(v as TicketPriority)}>
-            <SelectTrigger id="priority" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TICKET_PRIORITIES.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {fmtLabel(p)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="category">Category</Label>
-          <Select value={category} onValueChange={(v) => setCategory(v as TicketCategory)}>
-            <SelectTrigger id="category" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TICKET_CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {fmtLabel(c)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="ipAddress">IP Address</Label>
-          <Input id="ipAddress" name="ipAddress" />
+      <fieldset className="flex flex-col gap-3 border-t pt-4">
+        <legend className="float-left mb-3 w-full text-xs font-semibold text-muted-foreground">
+          Device and files <span className="font-normal">(optional)</span>
+        </legend>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="ipAddress">IP address</Label>
+            <Input id="ipAddress" name="ipAddress" inputMode="decimal" className="font-mono" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="assetId">Asset / device ID</Label>
+            <Input id="assetId" name="assetId" />
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="assetId">Asset/Device ID</Label>
-          <Input id="assetId" name="assetId" />
+          <Label htmlFor="files">Attachments</Label>
+          <Input
+            id="files"
+            name="files"
+            type="file"
+            multiple
+            className="h-auto py-1.5"
+            accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+          />
+          <p className="text-xs text-muted-foreground">Up to 5 files, 5 MB each: images, PDF, Word, Excel or text.</p>
         </div>
-      </div>
+      </fieldset>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="files">Attachments</Label>
-        <Input
-          id="files"
-          name="files"
-          type="file"
-          multiple
-          accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-        />
-      </div>
-
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving..." : "Create ticket"}
+      <Button type="submit" size="lg" disabled={pending}>
+        {pending ? "Creating…" : "Create ticket"}
       </Button>
     </form>
   );

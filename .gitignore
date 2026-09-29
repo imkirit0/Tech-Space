@@ -45,3 +45,8 @@ next-env.d.ts
 /graphify-out/
 .superpowers/
 vercel.env
+
+# impeccable local caches (design docs in .impeccable/surfaces and design.json are tracked)
+.impeccable/hook.cache.json
+.impeccable/questions/
+.impeccable/review/

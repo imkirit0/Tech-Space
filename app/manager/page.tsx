@@ -6,13 +6,19 @@ import { buildActivityWhere, parseActivityFilters } from "@/lib/activity-query";
 import { dateToISO, parseISODate, todayISO } from "@/lib/dates";
 import { formatDuration } from "@/lib/duration";
 import { ticketNo } from "@/lib/whatsapp";
-import { Nav } from "@/components/nav";
+import { statusChangeText } from "@/lib/tasks";
+import { Board } from "@/components/nav";
+import { Section } from "@/components/section";
 import { ActivityFilters as ActivityFiltersBar } from "@/components/activity-filters";
 import { ManagerActivityTable } from "@/components/manager-activity-table";
 import { LockPanel } from "@/components/lock-panel";
 import { RecentActivityFeed } from "@/components/recent-activity-feed";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
+export const metadata = { title: "Manager" };
+
+// ponytail: fixed on-screen cap; add pagination if managers need to browse past it (export has everything)
+const TABLE_LIMIT = 200;
 
 const truncateTitle = (s: string) => (s.length > 40 ? `${s.slice(0, 39)}…` : s);
 
@@ -27,7 +33,7 @@ export default async function ManagerPage({
 
   const filters = parseActivityFilters(await searchParams);
 
-  const [total, completed, pending, submittedToday, activities, locks] = await Promise.all([
+  const [total, completed, pending, submittedToday, staffCount, activities, locks] = await Promise.all([
     prisma.activity.count({ where: buildActivityWhere(filters) }),
     prisma.activity.count({ where: buildActivityWhere({ ...filters, status: "COMPLETED" }) }),
     prisma.activity.count({ where: buildActivityWhere({ ...filters, status: "PENDING" }) }),
@@ -36,7 +42,12 @@ export default async function ManagerPage({
       select: { userId: true },
       distinct: ["userId"],
     }),
-    prisma.activity.findMany({ where: buildActivityWhere(filters), orderBy: { date: "desc" } }),
+    prisma.user.count({ where: { role: "EMPLOYEE" } }),
+    prisma.activity.findMany({
+      where: buildActivityWhere(filters),
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: TABLE_LIMIT,
+    }),
     prisma.periodLock.findMany({
       include: { lockedBy: { select: { name: true } } },
       orderBy: { lockedAt: "desc" },
@@ -49,13 +60,14 @@ export default async function ManagerPage({
     employeeName: a.employeeName,
     designation: a.designation,
     activity: a.activity,
+    description: a.description,
     status: a.status,
     assignedBy: a.assignedBy,
     timeTaken: Number(a.timeTaken),
     deadline: a.deadline ? dateToISO(a.deadline) : null,
   }));
 
-  const [feedActivities, recentTickets, recentForwards, recentNotes] = await Promise.all([
+  const [feedActivities, recentTickets, recentForwards, recentNotes, recentTaskUpdates] = await Promise.all([
     prisma.activity.findMany({
       orderBy: { createdAt: "desc" },
       take: 15,
@@ -97,6 +109,11 @@ export default async function ManagerPage({
           },
         })
       : Promise.resolve([]),
+    prisma.taskUpdate.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      include: { author: { select: { name: true } }, task: { select: { num: true, title: true } } },
+    }),
   ]);
 
   const events: { at: string; text: string }[] = [];
@@ -133,6 +150,15 @@ export default async function ManagerPage({
     });
   }
 
+  for (const u of recentTaskUpdates) {
+    events.push({
+      at: u.createdAt.toISOString(),
+      text: u.statusTo
+        ? `Task #${u.task.num} “${truncateTitle(u.task.title)}”: ${statusChangeText(u.author.name, u.statusTo)}`
+        : `${u.author.name} on task #${u.task.num}: “${truncateTitle(u.body)}”`,
+    });
+  }
+
   for (const n of recentNotes) {
     events.push({
       at: n.at.toISOString(),
@@ -159,59 +185,58 @@ export default async function ManagerPage({
   }
   const exportHref = "/api/export" + (qs.size ? `?${qs.toString()}` : "");
 
-  const stats = [
-    { label: "Total activities", value: total, valueClass: "" },
-    { label: "Completed", value: completed, valueClass: "text-emerald-700" },
-    { label: "Pending", value: pending, valueClass: "text-amber-700" },
-    { label: "Employees submitted today", value: submittedToday.length, valueClass: "text-primary" },
-  ];
+  const filtered = qs.size > 0;
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Nav />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Manager Dashboard</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              All employee activity — filter, export, and lock reporting periods.
-            </p>
-          </div>
-          <a href={exportHref} className={buttonVariants({ variant: "default" })}>
+      <Board
+        title="Manager"
+        subtitle="All employee activity: filter, export, and lock reporting periods."
+        action={
+          <a href={exportHref} className={buttonVariants({ variant: "board", size: "lg" })}>
             <Download className="size-4" aria-hidden />
             Export to Excel
           </a>
-        </div>
+        }
+        counters={[
+          { label: filtered ? "Matching activities" : "Total activities", value: total, digits: 5, tone: "white" },
+          { label: "Completed", value: completed, digits: 5, tone: "white" },
+          { label: "Pending", value: pending, digits: 5, tone: pending > 0 ? "amber" : "white", primary: true },
+          {
+            label: "Staff submitted today",
+            value: submittedToday.length,
+            digits: 3,
+            tone: submittedToday.length < staffCount ? "red" : "white",
+            hint: staffCount ? `of ${staffCount}` : undefined,
+          },
+        ]}
+      />
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+        <Section title="Filter activities">
+          <ActivityFiltersBar key={qs.toString() || "empty"} />
+        </Section>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((s) => (
-            <Card key={s.label} className="gap-1 py-4">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-[13px] font-medium text-muted-foreground">
-                  {s.label}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className={`text-3xl font-semibold tabular-nums ${s.valueClass}`}>
-                {s.value}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Section
+          flush
+          title="Activities"
+          description={
+            total > rows.length
+              ? `Showing the newest ${rows.length} of ${total}. Narrow the filters, or export to see them all.`
+              : `${total} ${total === 1 ? "entry" : "entries"}${filtered ? " match the filters" : ""}.`
+          }
+        >
+          <ManagerActivityTable rows={rows} />
+        </Section>
 
         <RecentActivityFeed events={feedEvents} />
 
-        <section className="flex flex-col gap-3">
-          <ActivityFiltersBar key={qs.toString() || "empty"} />
-          <ManagerActivityTable rows={rows} />
-        </section>
-
-        <section>
-          <h2 className="mb-1 text-lg font-semibold tracking-tight">Period Locks</h2>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Lock a month or date range after review — employees can no longer change entries in it.
-          </p>
+        <Section
+          flush
+          title="Period locks"
+          description="Lock a month or date range after review. Employees can't change entries in it afterwards."
+        >
           <LockPanel locks={serializedLocks} />
-        </section>
+        </Section>
       </main>
     </div>
   );

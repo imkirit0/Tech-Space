@@ -12,19 +12,26 @@ import {
   type TicketPriority,
   type TicketCategory,
 } from "@/components/ticket-badges";
-import { Nav } from "@/components/nav";
+import Link from "next/link";
+import { ChevronDown, Search } from "lucide-react";
+import { Board } from "@/components/nav";
+import { Section } from "@/components/section";
 import { NewTicketDialog } from "@/components/new-ticket-dialog";
 import { TicketsTable, type TicketRow } from "@/components/tickets-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+export const metadata = { title: "Tickets" };
 
 const STATUS_ORDER: Record<TicketStatus, number> = { OPEN: 0, TAKEN_UP: 1, FORWARDED: 2, SOLVED: 3, DUPLICATE: 4 };
 const PRIORITY_ORDER: Record<TicketPriority, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
 // Native select styled to match the shadcn Input for a consistent filter bar.
 const selectClass =
-  "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+  "h-9 w-full appearance-none rounded-lg border border-input bg-card pr-8 pl-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
+const TAB_ORDER: TicketStatus[] = ["OPEN", "TAKEN_UP", "FORWARDED", "SOLVED", "DUPLICATE"];
 
 export default async function TicketsPage({
   searchParams,
@@ -65,7 +72,7 @@ export default async function TicketsPage({
   }
   const where: Prisma.TicketWhereInput = status ? { ...baseWhere, status } : baseWhere;
 
-  const [tickets, openCount, takenUpCount, solvedTodayCount] = await Promise.all([
+  const [tickets, byStatus, solvedTodayCount] = await Promise.all([
     prisma.ticket.findMany({
       where,
       include: {
@@ -76,8 +83,7 @@ export default async function TicketsPage({
         notes: { orderBy: { at: "desc" }, take: 1, select: { at: true } },
       },
     }),
-    prisma.ticket.count({ where: { ...baseWhere, status: "OPEN" } }),
-    prisma.ticket.count({ where: { ...baseWhere, status: "TAKEN_UP" } }),
+    prisma.ticket.groupBy({ by: ["status"], where: baseWhere, _count: { _all: true } }),
     // solvedAt is a real timestamp, so anchor to the true start of the IST day
     // (parseISODate would give UTC midnight — 5.5h late).
     prisma.ticket.count({
@@ -131,93 +137,129 @@ export default async function TicketsPage({
     };
   });
 
-  const stats = [
-    { label: "Open", value: openCount, valueClass: "text-rose-700" },
-    { label: "Taken Up", value: takenUpCount, valueClass: "text-sky-700" },
-    { label: "Solved Today", value: solvedTodayCount, valueClass: "text-emerald-700" },
-    { label: "Total", value: rows.length, valueClass: "" },
+  const counts = Object.fromEntries(byStatus.map((g) => [g.status, g._count._all])) as Partial<Record<TicketStatus, number>>;
+  const allCount = Object.values(counts).reduce((a, b) => a + (b ?? 0), 0);
+  const followUps = rows.filter((r) => r.needsFollowUp).length;
+  // One clock for server and client render so relative times hydrate identically.
+  const renderedAt = Date.now();
+
+  // Tabs and filters keep each other's values.
+  const hrefWith = (next: Record<string, string | undefined>) => {
+    const qs = new URLSearchParams();
+    const merged = { status, priority, category, q, ...next };
+    for (const [k, v] of Object.entries(merged)) if (v) qs.set(k, v);
+    return qs.size ? `/tickets?${qs.toString()}` : "/tickets";
+  };
+  const tabs: { key?: TicketStatus; label: string; count: number }[] = [
+    { label: "All", count: allCount },
+    ...TAB_ORDER.map((s) => ({ key: s, label: fmtLabel(s), count: counts[s] ?? 0 })),
   ];
+  const filtered = !!(priority || category || q);
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Nav />
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Tickets</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Tech team complaint tracker — one list, no duplicates.
-            </p>
-          </div>
-          <NewTicketDialog />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((s) => (
-            <Card key={s.label} className="gap-1 py-4">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-[13px] font-medium text-muted-foreground">{s.label}</CardTitle>
-              </CardHeader>
-              <CardContent className={`text-3xl font-semibold tabular-nums ${s.valueClass}`}>{s.value}</CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <form method="GET" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="filter-status" className="text-sm font-medium">
-              Status
-            </label>
-            <select id="filter-status" name="status" defaultValue={status ?? ""} className={selectClass}>
-              <option value="">All</option>
-              {TICKET_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {fmtLabel(s)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="filter-priority" className="text-sm font-medium">
-              Priority
-            </label>
-            <select id="filter-priority" name="priority" defaultValue={priority ?? ""} className={selectClass}>
-              <option value="">All</option>
-              {TICKET_PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {fmtLabel(p)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="filter-category" className="text-sm font-medium">
-              Category
-            </label>
-            <select id="filter-category" name="category" defaultValue={category ?? ""} className={selectClass}>
-              <option value="">All</option>
-              {TICKET_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {fmtLabel(c)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
+      <Board
+        title="Tickets"
+        subtitle="Tech team complaint tracker. One list, no duplicates."
+        action={<NewTicketDialog />}
+        counters={[
+          { label: "Open", value: counts.OPEN ?? 0, digits: 3, tone: (counts.OPEN ?? 0) > 0 ? "red" : "white", primary: true },
+          { label: "Taken up", value: counts.TAKEN_UP ?? 0, digits: 3, tone: "white" },
+          { label: "Need follow-up", value: followUps, digits: 3, tone: followUps > 0 ? "amber" : "white" },
+          { label: "Solved today", value: solvedTodayCount, digits: 3, tone: "white" },
+        ]}
+      />
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
+        <form method="GET" className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:flex-wrap sm:items-end sm:p-5">
+          {status && <input type="hidden" name="status" value={status} />}
+          <div className="flex flex-1 flex-col gap-1.5 sm:min-w-64">
             <label htmlFor="q" className="text-sm font-medium">
               Search
             </label>
-            <Input id="q" name="q" defaultValue={q ?? ""} className="w-48" placeholder="Name, phone, title..." />
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input id="q" name="q" type="search" defaultValue={q ?? ""} className="pl-8" placeholder="Title, name, phone, asset or IP" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:flex">
+            <div className="flex flex-col gap-1.5 sm:w-36">
+              <label htmlFor="filter-priority" className="text-sm font-medium">
+                Priority
+              </label>
+              <div className="relative">
+                <select id="filter-priority" name="priority" defaultValue={priority ?? ""} className={selectClass}>
+                <option value="">Any priority</option>
+                {TICKET_PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {fmtLabel(p)}
+                  </option>
+                ))}
+              </select>
+                <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                </div>
+            </div>
+            <div className="flex flex-col gap-1.5 sm:w-36">
+              <label htmlFor="filter-category" className="text-sm font-medium">
+                Category
+              </label>
+              <div className="relative">
+                <select id="filter-category" name="category" defaultValue={category ?? ""} className={selectClass}>
+                <option value="">Any category</option>
+                {TICKET_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {fmtLabel(c)}
+                  </option>
+                ))}
+              </select>
+                <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                </div>
+            </div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit">Apply</Button>
-            <a href="/tickets" className="text-sm text-muted-foreground underline-offset-4 hover:underline self-center">
-              Clear
-            </a>
+            <Button type="submit" className="flex-1 sm:flex-none">
+              Apply
+            </Button>
+            {filtered && (
+              <Link
+                href={hrefWith({ priority: undefined, category: undefined, q: undefined })}
+                className="inline-flex h-9 items-center px-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Clear
+              </Link>
+            )}
           </div>
         </form>
 
-        <TicketsTable rows={rows} isManager={user.role === "MANAGER"} />
+        <Section flush>
+          <nav aria-label="Filter by status" className="flex overflow-x-auto border-b px-2 [scrollbar-width:none] sm:px-3">
+            {tabs.map((t) => {
+              const active = status === t.key;
+              return (
+                <Link
+                  key={t.label}
+                  href={hrefWith({ status: t.key })}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative flex min-h-12 shrink-0 items-center gap-2 px-3 text-sm font-medium whitespace-nowrap transition-colors",
+                    "after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full",
+                    active ? "text-foreground after:bg-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t.label}
+                  <span
+                    className={cn(
+                      "min-w-6 rounded-full px-1.5 py-0.5 text-center text-xs tabular-nums",
+                      active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {t.count}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+          <TicketsTable rows={rows} isManager={user.role === "MANAGER"} now={renderedAt} />
+        </Section>
       </main>
     </div>
   );

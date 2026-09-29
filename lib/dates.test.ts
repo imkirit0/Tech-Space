@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dateToISO, isFutureISO, parseISODate, todayISO } from "./dates";
+import { dateToISO, fmtDay, fmtDayLong, isFutureISO, parseISODate, todayISO } from "./dates";
 
 describe("dates", () => {
   it("todayISO returns YYYY-MM-DD", () => {
@@ -16,5 +16,9 @@ describe("dates", () => {
     const tomorrow = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
     expect(isFutureISO(tomorrow)).toBe(true);
     expect(isFutureISO(todayISO())).toBe(false);
+  });
+  it("fmtDay keeps the calendar day regardless of server time zone", () => {
+    expect(fmtDay("2026-08-01")).toBe("1 Aug");
+    expect(fmtDayLong("2026-09-29")).toMatch(/^Tue, 29 Sept?,? 2026$/);
   });
 });

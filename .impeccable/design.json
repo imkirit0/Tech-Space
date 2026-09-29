@@ -1,0 +1,448 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-29T07:32:12.544Z",
+  "title": "Design System: G-TEC Activity Reporting",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Counter Navy",
+        "tonalRamp": [
+          "oklch(15% 0.13 256)",
+          "oklch(25% 0.13 256)",
+          "oklch(35% 0.13 256)",
+          "oklch(45% 0.13 256)",
+          "oklch(55% 0.13 256)",
+          "oklch(65% 0.13 256)",
+          "oklch(80% 0.13 256)",
+          "oklch(95% 0.13 256)"
+        ]
+      },
+      "board": {
+        "role": "primary",
+        "displayName": "Board Navy",
+        "tonalRamp": [
+          "oklch(15% 0.1 254)",
+          "oklch(25% 0.1 254)",
+          "oklch(35% 0.1 254)",
+          "oklch(45% 0.1 254)",
+          "oklch(55% 0.1 254)",
+          "oklch(65% 0.1 254)",
+          "oklch(80% 0.1 254)",
+          "oklch(95% 0.1 254)"
+        ]
+      },
+      "board-well": {
+        "role": "primary",
+        "displayName": "Board Well",
+        "tonalRamp": [
+          "oklch(15% 0.09 254)",
+          "oklch(25% 0.09 254)",
+          "oklch(35% 0.09 254)",
+          "oklch(45% 0.09 254)",
+          "oklch(55% 0.09 254)",
+          "oklch(65% 0.09 254)",
+          "oklch(80% 0.09 254)",
+          "oklch(95% 0.09 254)"
+        ]
+      },
+      "board-line": {
+        "role": "primary",
+        "displayName": "Board Line",
+        "tonalRamp": [
+          "oklch(15% 0.09 252)",
+          "oklch(25% 0.09 252)",
+          "oklch(35% 0.09 252)",
+          "oklch(45% 0.09 252)",
+          "oklch(55% 0.09 252)",
+          "oklch(65% 0.09 252)",
+          "oklch(80% 0.09 252)",
+          "oklch(95% 0.09 252)"
+        ]
+      },
+      "led-red": {
+        "role": "secondary",
+        "displayName": "LED Red",
+        "tonalRamp": [
+          "oklch(15% 0.2 30)",
+          "oklch(25% 0.2 30)",
+          "oklch(35% 0.2 30)",
+          "oklch(45% 0.2 30)",
+          "oklch(55% 0.2 30)",
+          "oklch(65% 0.2 30)",
+          "oklch(80% 0.2 30)",
+          "oklch(95% 0.2 30)"
+        ]
+      },
+      "led-amber": {
+        "role": "secondary",
+        "displayName": "LED Amber",
+        "tonalRamp": [
+          "oklch(15% 0.15 75)",
+          "oklch(25% 0.15 75)",
+          "oklch(35% 0.15 75)",
+          "oklch(45% 0.15 75)",
+          "oklch(55% 0.15 75)",
+          "oklch(65% 0.15 75)",
+          "oklch(80% 0.15 75)",
+          "oklch(95% 0.15 75)"
+        ]
+      },
+      "led-white": {
+        "role": "secondary",
+        "displayName": "LED White"
+      },
+      "led-off": {
+        "role": "secondary",
+        "displayName": "Unlit Segment"
+      },
+      "brand-red": {
+        "role": "tertiary",
+        "displayName": "Brand Red",
+        "tonalRamp": [
+          "oklch(15% 0.22 29)",
+          "oklch(25% 0.22 29)",
+          "oklch(35% 0.22 29)",
+          "oklch(45% 0.22 29)",
+          "oklch(55% 0.22 29)",
+          "oklch(65% 0.22 29)",
+          "oklch(80% 0.22 29)",
+          "oklch(95% 0.22 29)"
+        ]
+      },
+      "destructive": {
+        "role": "tertiary",
+        "displayName": "Deep Rose",
+        "tonalRamp": [
+          "oklch(15% 0.18 12)",
+          "oklch(25% 0.18 12)",
+          "oklch(35% 0.18 12)",
+          "oklch(45% 0.18 12)",
+          "oklch(55% 0.18 12)",
+          "oklch(65% 0.18 12)",
+          "oklch(80% 0.18 12)",
+          "oklch(95% 0.18 12)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Cool Ground",
+        "tonalRamp": [
+          "oklch(15% 0.01 250)",
+          "oklch(25% 0.01 250)",
+          "oklch(35% 0.01 250)",
+          "oklch(45% 0.01 250)",
+          "oklch(55% 0.01 250)",
+          "oklch(65% 0.01 250)",
+          "oklch(80% 0.01 250)",
+          "oklch(95% 0.01 250)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Counter White"
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15% 0.03 255)",
+          "oklch(25% 0.03 255)",
+          "oklch(35% 0.03 255)",
+          "oklch(45% 0.03 255)",
+          "oklch(55% 0.03 255)",
+          "oklch(65% 0.03 255)",
+          "oklch(80% 0.03 255)",
+          "oklch(95% 0.03 255)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Slate Ink",
+        "tonalRamp": [
+          "oklch(15% 0.04 258)",
+          "oklch(25% 0.04 258)",
+          "oklch(35% 0.04 258)",
+          "oklch(45% 0.04 258)",
+          "oklch(55% 0.04 258)",
+          "oklch(65% 0.04 258)",
+          "oklch(80% 0.04 258)",
+          "oklch(95% 0.04 258)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Pale Steel",
+        "tonalRamp": [
+          "oklch(15% 0.015 255)",
+          "oklch(25% 0.015 255)",
+          "oklch(35% 0.015 255)",
+          "oklch(45% 0.015 255)",
+          "oklch(55% 0.015 255)",
+          "oklch(65% 0.015 255)",
+          "oklch(80% 0.015 255)",
+          "oklch(95% 0.015 255)"
+        ]
+      },
+      "secondary-foreground": {
+        "role": "neutral",
+        "displayName": "Steel Ink"
+      },
+      "accent": {
+        "role": "neutral",
+        "displayName": "In-hand Tint"
+      },
+      "accent-foreground": {
+        "role": "neutral",
+        "displayName": "In-hand Ink"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline"
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Field Edge"
+      },
+      "ring": {
+        "role": "neutral",
+        "displayName": "Ring Blue"
+      },
+      "board-foreground": {
+        "role": "neutral",
+        "displayName": "Board White"
+      },
+      "board-muted": {
+        "role": "neutral",
+        "displayName": "Board Mist"
+      },
+      "primary-foreground": {
+        "role": "neutral",
+        "displayName": "On Navy"
+      }
+    },
+    "typographyMeta": {
+      "board-title": {
+        "displayName": "Board Title",
+        "purpose": "Page title on the token board; 1.5rem on phones, 1.75rem from 640px."
+      },
+      "led": {
+        "displayName": "LED",
+        "purpose": "Doto 900 numerals for live counts, the clock, and display-size T-numbers only. Counters 1.9-2.5rem, primary counter 2.4-3.5rem."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel headings on the counter; dialog and sign-in headings at 1.25rem."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Tables, logs, descriptions; tabular figures in tables."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Board counter labels, lamp chips, fact labels. Sentence case, no tracking."
+      },
+      "ticket-number": {
+        "displayName": "Ticket Number",
+        "purpose": "Bold navy Geist Mono T-numbers in table rows."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel-hairline-lift",
+        "value": "0 1px 2px rgb(0 31 64 / 0.04)",
+        "purpose": "Counter panels."
+      },
+      {
+        "name": "dialog-float",
+        "value": "0 24px 48px -12px rgb(0 31 64 / 0.35)",
+        "purpose": "Modal dialogs."
+      },
+      {
+        "name": "board-card-float",
+        "value": "0 24px 60px -20px rgb(0 0 0 / 0.6)",
+        "purpose": "Sign-in card over the board."
+      },
+      {
+        "name": "board-button-lift",
+        "value": "0 1px 0 rgb(255 255 255 / 0.4) inset, 0 6px 16px -6px rgb(0 0 0 / 0.5)",
+        "purpose": "White primary action on the board."
+      },
+      {
+        "name": "led-glow-red",
+        "value": "0 0 12px rgb(255 59 46 / 0.55)",
+        "purpose": "text-shadow on lit red LED numerals."
+      },
+      {
+        "name": "led-glow-amber",
+        "value": "0 0 12px rgb(255 182 46 / 0.5)",
+        "purpose": "text-shadow on lit amber LED numerals."
+      },
+      {
+        "name": "led-glow-white",
+        "value": "0 0 10px rgb(243 247 252 / 0.35)",
+        "purpose": "text-shadow on lit white LED numerals."
+      }
+    ],
+    "motion": [
+      {
+        "name": "led-step",
+        "value": "420ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "One flare (brightness 2.2, 1px blur, 2px lift, to rest) when an LED count changes; none under reduced motion."
+      },
+      {
+        "name": "popup",
+        "value": "100ms fade-in + zoom-in-95",
+        "purpose": "Dialogs, select and menu popups."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "container",
+        "value": "1152px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Counter primary action.",
+      "html": "<button class=\"ds-btn\">Add activity</button>",
+      "css": ".ds-btn{height:36px;padding:0 12px;border-radius:8px;border:1px solid transparent;background:var(--primary,#004282);color:#fff;font:500 14px/1 Geist,system-ui,sans-serif;cursor:pointer;transition:all .15s}.ds-btn:hover{background:rgb(0 66 130/.8)}.ds-btn:focus-visible{outline:none;border-color:#2b6cb0;box-shadow:0 0 0 3px rgb(43 108 176/.5)}.ds-btn:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Board Buttons",
+      "kind": "button",
+      "refersTo": "button-board",
+      "description": "White primary and ghost secondary actions on the navy board.",
+      "html": "<div class=\"ds-bd\"><button class=\"ds-btn-board\">New ticket</button><button class=\"ds-btn-bghost\">Export</button></div>",
+      "css": ".ds-bd{background:#002b55;padding:16px;display:flex;gap:8px}.ds-btn-board{height:36px;padding:0 12px;border-radius:8px;border:0;background:#fff;color:#004282;font:500 14px/1 Geist,system-ui,sans-serif;box-shadow:0 1px 0 rgb(255 255 255/.4) inset,0 6px 16px -6px rgb(0 0 0/.5);cursor:pointer}.ds-btn-board:hover{background:#e8f0fa}.ds-btn-board:focus-visible,.ds-btn-bghost:focus-visible{outline:none;box-shadow:0 0 0 3px rgb(255 255 255/.5)}.ds-btn-bghost{height:36px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:#fff;box-shadow:inset 0 0 0 1px #13406e;font:500 14px/1 Geist,system-ui,sans-serif;cursor:pointer}.ds-btn-bghost:hover{background:rgb(255 255 255/.1)}"
+    },
+    {
+      "name": "Destructive Confirm",
+      "kind": "button",
+      "refersTo": "button-destructive-confirm",
+      "description": "Deep Rose confirm, only inside the confirm dialog.",
+      "html": "<button class=\"ds-btn-del\">Delete entry</button>",
+      "css": ".ds-btn-del{height:36px;padding:0 12px;border-radius:8px;border:0;background:#b4123a;color:#fff;font:500 14px/1 Geist,system-ui,sans-serif;cursor:pointer}.ds-btn-del:hover{background:rgb(180 18 58/.9)}.ds-btn-del:focus-visible{outline:none;box-shadow:0 0 0 3px rgb(180 18 58/.3)}"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Text field; select triggers match it.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search tickets\">",
+      "css": ".ds-input{height:36px;width:240px;padding:4px 10px;border-radius:8px;border:1px solid #c9d4e1;background:#fff;color:#0c1a2c;font:400 14px Geist,system-ui,sans-serif;transition:border-color .15s}.ds-input::placeholder{color:#52627a}.ds-input:focus-visible{outline:none;border-color:#2b6cb0;box-shadow:0 0 0 3px rgb(43 108 176/.5)}"
+    },
+    {
+      "name": "Board Navigation",
+      "kind": "nav",
+      "refersTo": "board",
+      "description": "Nav links on the board; the active link carries the brand-red underline.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-a is-active\" href=\"#\">Dashboard</a><a class=\"ds-nav-a\" href=\"#\">My Activities</a><a class=\"ds-nav-a\" href=\"#\">Tickets</a></nav>",
+      "css": ".ds-nav{display:flex;gap:4px;background:#002b55;padding:0 8px;border-bottom:1px solid #13406e}.ds-nav-a{position:relative;display:flex;align-items:center;min-height:44px;padding:0 12px;color:#a9bfd9;font:500 14px Geist,system-ui,sans-serif;text-decoration:none;transition:color .15s}.ds-nav-a:hover{color:#fff}.ds-nav-a:focus-visible{outline:none;background:rgb(255 255 255/.1)}.ds-nav-a.is-active{color:#fff}.ds-nav-a.is-active::after{content:\"\";position:absolute;left:12px;right:12px;bottom:0;height:2px;border-radius:9999px;background:#ff0000}"
+    },
+    {
+      "name": "LED Counter Strip",
+      "kind": "custom",
+      "refersTo": "counter-well",
+      "description": "Board counters: label over a Doto readout with unlit 8s behind fixed digits.",
+      "html": "<dl class=\"ds-well\"><div class=\"ds-cell ds-primary\"><dt>Hours logged today</dt><dd><span class=\"ds-led\"><span class=\"ds-off\">8.88</span><span class=\"ds-on ds-amber\"> 6.5</span></span><small>of 8</small></dd></div><div class=\"ds-cell\"><dt>Pending</dt><dd><span class=\"ds-led\"><span class=\"ds-off\">888</span><span class=\"ds-on ds-amber\">  3</span></span></dd></div><div class=\"ds-cell\"><dt>In progress</dt><dd><span class=\"ds-led\"><span class=\"ds-off\">888</span><span class=\"ds-on ds-white\">  1</span></span></dd></div></dl>",
+      "css": ".ds-well{display:flex;margin:0;background:#001f40;box-shadow:inset 0 0 0 1px #13406e;border-radius:8px;font-family:Geist,system-ui,sans-serif}.ds-cell{flex:1;padding:12px 20px 14px;display:flex;flex-direction:column;gap:6px}.ds-cell+.ds-cell{border-left:1px solid #13406e}.ds-primary{flex:1.6}.ds-cell dt{font-size:12px;font-weight:500;color:#a9bfd9}.ds-cell dd{margin:0;display:flex;align-items:baseline;gap:8px}.ds-cell small{font-size:12px;color:#a9bfd9}.ds-led{position:relative;display:inline-block;font:900 40px/1 Doto,monospace;white-space:pre}.ds-primary .ds-led{font-size:56px}.ds-off{color:rgb(255 255 255/.07)}.ds-on{position:absolute;inset:0}.ds-amber{color:#ffb62e;text-shadow:0 0 12px rgb(255 182 46/.5)}.ds-white{color:#f3f7fc;text-shadow:0 0 10px rgb(243 247 252/.35)}"
+    },
+    {
+      "name": "Lamp Chip",
+      "kind": "chip",
+      "refersTo": "lamp-chip",
+      "description": "State as a lamp plus a word, one vocabulary app-wide.",
+      "html": "<span class=\"ds-lamp ds-l-amber\"><i></i>Open</span> <span class=\"ds-lamp ds-l-blue\"><i></i>Taken up</span> <span class=\"ds-lamp ds-l-violet\"><i></i>Forwarded</span> <span class=\"ds-lamp ds-l-green\"><i></i>Solved</span> <span class=\"ds-lamp ds-l-slate\"><i></i>Duplicate</span>",
+      "css": ".ds-lamp{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:6.4px;font:500 12px/16px Geist,system-ui,sans-serif;white-space:nowrap}.ds-lamp i{width:6px;height:6px;border-radius:9999px}.ds-l-amber{background:#fffbeb;color:#78350f}.ds-l-amber i{background:#f59e0b}.ds-l-blue{background:#e3ecf7;color:#003366}.ds-l-blue i{background:#004282}.ds-l-violet{background:#f5f3ff;color:#4c1d95}.ds-l-violet i{background:#7c3aed}.ds-l-green{background:#ecfdf5;color:#064e3b}.ds-l-green i{background:#059669}.ds-l-slate{background:#f1f5f9;color:#334155}.ds-l-slate i{background:#94a3b8}"
+    },
+    {
+      "name": "Priority Mark",
+      "kind": "custom",
+      "refersTo": "lamp-chip",
+      "description": "Four bars lit from the left; ink brightens with priority, only Urgent spends red.",
+      "html": "<span class=\"ds-pri ds-p-low\"><b class=\"on\"></b><b></b><b></b><b></b>Low</span> <span class=\"ds-pri ds-p-med\"><b class=\"on\"></b><b class=\"on\"></b><b></b><b></b>Medium</span> <span class=\"ds-pri ds-p-high\"><b class=\"on\"></b><b class=\"on\"></b><b class=\"on\"></b><b></b>High</span> <span class=\"ds-pri ds-p-urgent\"><b class=\"on\"></b><b class=\"on\"></b><b class=\"on\"></b><b class=\"on\"></b>Urgent</span>",
+      "css": ".ds-pri{display:inline-flex;align-items:flex-end;gap:1px;margin-right:12px;font:500 12px Geist,system-ui,sans-serif}.ds-pri b{width:3px;border-radius:1px;background:#dbe3ec}.ds-pri b:nth-child(1){height:5px}.ds-pri b:nth-child(2){height:7px}.ds-pri b:nth-child(3){height:9px}.ds-pri b:nth-child(4){height:11px;margin-right:6px}.ds-pri b.on{background:currentColor}.ds-p-low{color:#52627a}.ds-p-med{color:rgb(12 26 44/.8)}.ds-p-high{color:#0c1a2c;font-weight:600}.ds-p-urgent{color:#b91c1c;font-weight:600}"
+    },
+    {
+      "name": "Counter Panel",
+      "kind": "card",
+      "refersTo": "counter-panel",
+      "description": "White work panel with a hairline heading row; T-numbers in bold navy mono.",
+      "html": "<section class=\"ds-panel\"><header><h2>Open queue</h2><p>Oldest first.</p></header><div class=\"ds-body\"><span class=\"ds-tno\">T-0142</span>Projector not working in Lab 2</div></section>",
+      "css": ".ds-panel{background:#fff;border:1px solid #dbe3ec;border-radius:11.2px;box-shadow:0 1px 2px rgb(0 31 64/.04);overflow:hidden;font-family:Geist,system-ui,sans-serif;color:#0c1a2c}.ds-panel header{padding:14px 20px;border-bottom:1px solid #dbe3ec}.ds-panel h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.025em}.ds-panel p{margin:2px 0 0;font-size:14px;color:#52627a}.ds-body{padding:20px;font-size:14px}.ds-tno{font:700 14px \"Geist Mono\",ui-monospace,monospace;color:#004282;margin-right:8px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Front Office Token Board",
+    "overview": "Every signed-in page opens under a full-width deep-navy board, the kind that hangs above a front-office counter: the real G-TEC logo, the navigation, the page title with its one primary action, and a row of LED dot-matrix counters showing the numbers that matter right now (hours logged today, what is pending, the open queue). Below it, a white counter on a cool pale ground is where the work gets done: filters, tables, logs, forms.\n\nThe two halves never trade places. The board announces; the counter works. Numbers earn LED only when they are live counts or ticket T-numbers at display size, and a changing count flares once like a board stepping to the next digit. State is spoken in one lamp vocabulary across activities and tickets, priority is read as ink brightness, and red is reserved for the brand and for urgency, with destructive actions carried by a separate deep rose.\n\nThe system is dense and operational, built for staff on office desktops and phones alike. It refuses the default white admin panel with a grid of same-size stat cards.",
+    "keyCharacteristics": [
+      "Navy token board header on every authenticated page, white counter below.",
+      "LED dot-matrix numerals (Doto 900) with visible unlit 8s behind fixed digit positions.",
+      "One sans (Geist) in regular, medium, and semibold; Geist Mono bold only for T-numbers and technical strings.",
+      "A single lamp-plus-word state vocabulary.",
+      "Flat counter surfaces with hairline borders; depth only where something floats."
+    ],
+    "rules": [
+      {
+        "name": "The Red Is Brand Rule",
+        "body": "Red means brand or urgent only: the active-nav underline, urgent priority, urgent lamps, and LED red. Destructive actions use Deep Rose, never red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Lamp Rule",
+        "body": "State is always a lamp plus a word, from one fixed vocabulary: amber = waiting (Pending, Open), navy = in hand (In progress, Taken up), green = done (Completed, Solved), slate = parked (On hold, Duplicate, Locked), violet = with someone else (Forwarded), red = urgent. Violet is an approved named lamp for Forwarded only. Don't invent new state colours.",
+        "section": "colors"
+      },
+      {
+        "name": "The Board Owns LED Rule",
+        "body": "LED colours light only Doto numerals. Counter UI never borrows led-red, led-amber, or led-white.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numbers-Only LED Rule",
+        "body": "Doto is for counts, the clock, and T-numbers at display size. It never sets words, labels, or table-size T-numbers, where it reads thin; rows use bold navy mono instead.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed Digit Rule",
+        "body": "An LED readout reserves every digit position with an unlit 8, so a changing count never shifts the layout.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Counter Rule",
+        "body": "Counter surfaces are flat at rest. Shadows belong to floating layers and the board's own light, never to cards in a grid.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do open every signed-in page with the token board: title left, one primary action right, live counters beneath.",
+      "Do make one counter per page the primary (wider cell, larger readout) and tone it amber until its target is met.",
+      "Do show state as a lamp plus a word from the fixed vocabulary; Forwarded is violet.",
+      "Do read priority as ink brightness with the four-bar mark.",
+      "Do set T-numbers in bold navy Geist Mono in tables, and in Doto only at display size.",
+      "Do right-align hours with tabular figures against the 8-hour day.",
+      "Do wrap destructive actions in the confirm dialog with a Deep Rose button."
+    ],
+    "donts": [
+      "Don't build rows of same-size white stat cards; counts live on the board as LED readouts.",
+      "Don't use red for destructive actions or decoration; red is brand and urgency only.",
+      "Don't set words, labels, or small numbers in Doto.",
+      "Don't use LED colours on the white counter.",
+      "Don't add shadows to counter panels beyond the hairline lift.",
+      "Don't add new lamp colours for new states; map them to the existing six."
+    ]
+  }
+}

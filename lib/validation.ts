@@ -12,7 +12,10 @@ export const activitySchema = z
     assignedBy: z.string().trim().min(1, "Assigned By is required"),
     status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]),
     deadline: iso.optional(),
-    timeTaken: z.coerce.number().positive("Time Taken must be greater than zero"),
+    timeTaken: z.coerce
+      .number()
+      .positive("Time Taken must be greater than zero")
+      .max(24, "Time Taken cannot be more than 24 hours in a day"),
   })
   .refine((v) => !v.deadline || v.deadline >= v.date, {
     message: "Deadline cannot be earlier than the activity date",
@@ -63,3 +66,22 @@ export const forwardSchema = z.object({
 });
 
 export type ForwardInput = z.infer<typeof forwardSchema>;
+
+export const taskSchema = z.object({
+  title: z.string().trim().min(3, "Task title must be at least 3 characters").max(200),
+  description: z.string().trim().max(5000).optional(),
+  // Empty = nobody yet: the task goes on the team board for anyone to take up.
+  assigneeId: z.string().optional(),
+  shared: z.boolean().default(false),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
+  dueDate: iso.optional(),
+});
+
+export type TaskInput = z.infer<typeof taskSchema>;
+
+export const taskUpdateSchema = z
+  .object({
+    body: z.string().trim().max(5000),
+    statusTo: z.enum(["TODO", "IN_PROGRESS", "BLOCKED", "DONE"]).optional(),
+  })
+  .refine((v) => v.body.length > 0 || v.statusTo, { message: "Write an update first", path: ["body"] });

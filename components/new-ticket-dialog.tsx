@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -18,13 +19,14 @@ export function NewTicketDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>
+      <DialogTrigger render={<Button variant="board" size="lg" />}>
         <Plus className="size-4" aria-hidden />
-        New Ticket
+        New ticket
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>New ticket</DialogTitle>
+          <DialogDescription>Search the list first so the same complaint isn't logged twice.</DialogDescription>
         </DialogHeader>
         <TicketForm action={createTicket} onSuccess={() => setOpen(false)} />
       </DialogContent>

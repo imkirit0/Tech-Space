@@ -17,3 +17,21 @@ export function parseISODate(iso: string): Date {
 export function isFutureISO(iso: string): boolean {
   return iso > todayISO();
 }
+
+// Display helpers for YYYY-MM-DD values (formatted in UTC so the calendar day never shifts).
+const DAY = new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", day: "numeric", month: "short" });
+const DAY_LONG = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "UTC",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+export function fmtDay(iso: string): string {
+  return DAY.format(parseISODate(iso));
+}
+
+export function fmtDayLong(iso: string): string {
+  return DAY_LONG.format(parseISODate(iso));
+}

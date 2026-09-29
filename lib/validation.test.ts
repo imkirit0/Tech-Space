@@ -16,6 +16,10 @@ describe("activitySchema", () => {
   it("rejects timeTaken <= 0", () => {
     expect(activitySchema.safeParse({ ...base, timeTaken: 0 }).success).toBe(false);
   });
+  it("rejects more than 24 hours for one entry", () => {
+    expect(activitySchema.safeParse({ ...base, timeTaken: 24 }).success).toBe(true);
+    expect(activitySchema.safeParse({ ...base, timeTaken: 24.25 }).success).toBe(false);
+  });
   it("rejects future date", () => {
     expect(activitySchema.safeParse({ ...base, date: "2999-01-01" }).success).toBe(false);
   });

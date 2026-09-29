@@ -23,6 +23,7 @@ model User {
   email       String     @unique
   name        String
   designation String?
+  phone       String?    // WhatsApp number, normalised to digits with country code (e.g. 919847012345)
   role        Role       @default(EMPLOYEE)
   createdAt   DateTime   @default(now())
   activities  Activity[]
@@ -33,6 +34,10 @@ model User {
   ticketForwards TicketForward[] @relation("ForwardActor")
   ticketAttachments TicketAttachment[] @relation("AttachmentUploader")
   ticketNotes    TicketNote[] @relation("NoteAuthor")
+  tasksAssigned  Task[]       @relation("TaskAssignee")
+  tasksCreated   Task[]       @relation("TaskCreator")
+  taskUpdates    TaskUpdate[] @relation("TaskUpdateAuthor")
+  taskReads      TaskRead[]
 }
 
 model Activity {
@@ -168,4 +173,67 @@ model TicketAttachment {
   createdAt    DateTime @default(now())
 
   @@index([ticketId])
+}
+
+// ── Tasks: manager-assigned work with a Slack-style update thread ──
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
+
+model Task {
+  id               String         @id @default(cuid())
+  num              Int            @unique @default(autoincrement())
+  title            String
+  description      String?
+  priority         TicketPriority @default(MEDIUM)
+  status           TaskStatus     @default(TODO)
+  dueDate          DateTime?      @db.Date
+  // Null = "up for grabs": on the team board until someone takes it up.
+  assigneeId       String?
+  assignee         User?          @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  // Shared tasks sit on the team board: everyone can see and follow them.
+  shared           Boolean        @default(false)
+  createdById      String
+  createdBy        User           @relation("TaskCreator", fields: [createdById], references: [id])
+  // Denormalised "last message" so list views and unread badges need no join over updates.
+  lastActivityAt   DateTime       @default(now())
+  lastActivityById String?
+  completedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  updates          TaskUpdate[]
+  reads            TaskRead[]
+
+  @@index([assigneeId, status])
+  @@index([shared, status])
+  @@index([createdById])
+  @@index([lastActivityAt])
+}
+
+model TaskUpdate {
+  id        String      @id @default(cuid())
+  taskId    String
+  task      Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User        @relation("TaskUpdateAuthor", fields: [authorId], references: [id])
+  body      String
+  // Set when this update moved the task to a new status.
+  statusTo  TaskStatus?
+  createdAt DateTime    @default(now())
+
+  @@index([taskId, createdAt])
+}
+
+model TaskRead {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime @default(now())
+
+  @@id([userId, taskId])
 }

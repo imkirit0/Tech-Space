@@ -7,16 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { STATUSES, statusLabel, LAMP, type ActivityStatus } from "@/components/status-badge";
+import { cn } from "@/lib/utils";
 import type { ActivityInput } from "@/lib/validation";
 
-const STATUSES = ["PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"] as const;
+const STATUS_LAMP = { PENDING: "amber", IN_PROGRESS: "blue", COMPLETED: "green", ON_HOLD: "slate" } as const;
 
 type ExistingActivity = {
   id: string;
@@ -24,7 +19,7 @@ type ExistingActivity = {
   activity: string;
   description: string | null;
   assignedBy: string;
-  status: (typeof STATUSES)[number];
+  status: ActivityStatus;
   deadline: string | null; // ISO
   timeTaken: number;
 };
@@ -36,9 +31,10 @@ type Props = {
   onSuccess?: () => void;
 };
 
+const optional = <span className="font-normal text-muted-foreground">(optional)</span>;
+
 export function ActivityForm({ action, maxDate, existing, onSuccess }: Props) {
   const router = useRouter();
-  const [status, setStatus] = useState<(typeof STATUSES)[number]>(existing?.status ?? "PENDING");
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -51,7 +47,7 @@ export function ActivityForm({ action, maxDate, existing, onSuccess }: Props) {
       activity: String(form.get("activity") ?? ""),
       description: String(form.get("description") ?? "") || undefined,
       assignedBy: String(form.get("assignedBy") ?? ""),
-      status,
+      status: String(form.get("status") ?? "PENDING") as ActivityStatus,
       deadline: String(form.get("deadline") ?? "") || undefined,
       timeTaken: Number(form.get("timeTaken")),
     };
@@ -61,7 +57,7 @@ export function ActivityForm({ action, maxDate, existing, onSuccess }: Props) {
     try {
       result = await action(input);
     } catch {
-      toast.error("Request failed \u2014 your session may have expired. Refresh the page.");
+      toast.error("Couldn't save. Your session may have expired, so refresh the page and try again.");
       return;
     } finally {
       setPending(false);
@@ -79,64 +75,85 @@ export function ActivityForm({ action, maxDate, existing, onSuccess }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="date">Date</Label>
-          <Input id="date" name="date" type="date" max={maxDate} defaultValue={existing?.date ?? maxDate} required />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="deadline">Deadline</Label>
-          <Input id="deadline" name="deadline" type="date" defaultValue={existing?.deadline ?? ""} />
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="activity">What did you work on?</Label>
+        <Input
+          id="activity"
+          name="activity"
+          defaultValue={existing?.activity}
+          placeholder="e.g. Prepared batch schedule for October"
+          required
+          autoFocus={!existing}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="activity">Activity</Label>
-        <Input id="activity" name="activity" defaultValue={existing?.activity} required />
+        <Label htmlFor="description">Details {optional}</Label>
+        <Textarea id="description" name="description" defaultValue={existing?.description ?? ""} rows={2} />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="description">Description</Label>
-        <Textarea id="description" name="description" defaultValue={existing?.description ?? ""} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-[1fr_7rem] gap-3">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="assignedBy">Assigned By</Label>
-          <Input id="assignedBy" name="assignedBy" defaultValue={existing?.assignedBy} required />
+          <Label htmlFor="assignedBy">Assigned by</Label>
+          <Input id="assignedBy" name="assignedBy" defaultValue={existing?.assignedBy} placeholder="Name" required />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="timeTaken">Time Taken (hrs)</Label>
+          <Label htmlFor="timeTaken">Hours</Label>
           <Input
             id="timeTaken"
             name="timeTaken"
             type="number"
+            inputMode="decimal"
             step={0.25}
             min={0.25}
+            max={24}
             defaultValue={existing?.timeTaken}
+            placeholder="1.5"
+            className="tabular-nums"
             required
           />
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="status">Status</Label>
-        <Select value={status} onValueChange={(v) => setStatus(v as (typeof STATUSES)[number])}>
-          <SelectTrigger id="status" className="w-full">
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s.replace("_", " ")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="mb-1.5 text-sm leading-none font-medium">Status</legend>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          {STATUSES.map((s) => (
+            <label
+              key={s}
+              className={cn(
+                "flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border bg-card px-3 text-sm transition-colors",
+                "hover:bg-muted has-checked:border-primary has-checked:bg-accent has-checked:font-medium has-checked:text-accent-foreground",
+                "has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+              )}
+            >
+              <input
+                type="radio"
+                name="status"
+                value={s}
+                defaultChecked={(existing?.status ?? "PENDING") === s}
+                className="sr-only"
+              />
+              <span className={cn("size-2 shrink-0 rounded-full", LAMP[STATUS_LAMP[s]].dot)} aria-hidden />
+              {statusLabel(s)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="date">Date</Label>
+          <Input id="date" name="date" type="date" max={maxDate} defaultValue={existing?.date ?? maxDate} required />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="deadline">Deadline {optional}</Label>
+          <Input id="deadline" name="deadline" type="date" defaultValue={existing?.deadline ?? ""} />
+        </div>
       </div>
 
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving..." : existing ? "Save changes" : "Add activity"}
+      <Button type="submit" size="lg" disabled={pending} className="mt-1">
+        {pending ? "Saving…" : existing ? "Save changes" : "Add activity"}
       </Button>
     </form>
   );

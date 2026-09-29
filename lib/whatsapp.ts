@@ -36,3 +36,35 @@ export function solvedMessage(t: {
   const stamp = IST_STAMP.format(t.solvedAt).replace(" at ", ", ");
   return `Hi ${t.contactName}, your complaint ${ticketNo(t.num)} — ${t.title} has been resolved on ${stamp} IST. Resolution: ${t.resolutionNote}. — G-TEC Tech Team`;
 }
+
+/** 919847012345 → "+91 98470 12345"; other countries just get a leading "+". */
+export function displayPhone(normalized: string): string {
+  if (normalized.length === 12 && normalized.startsWith("91")) {
+    return `+91 ${normalized.slice(2, 7)} ${normalized.slice(7)}`;
+  }
+  return `+${normalized}`;
+}
+
+const PRIORITY_WORD: Record<string, string> = { LOW: "Low", MEDIUM: "Medium", HIGH: "High", URGENT: "URGENT" };
+const DUE = new Intl.DateTimeFormat("en-IN", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
+
+export function taskAssignedMessage(t: {
+  assigneeName: string;
+  managerName: string;
+  num: number;
+  title: string;
+  priority: string;
+  dueDate: string | null; // YYYY-MM-DD
+  url: string;
+}): string {
+  const first = t.assigneeName.split(/\s+/)[0] || t.assigneeName;
+  const lines = [
+    `Hi ${first}, ${t.managerName} assigned you a task on G-TEC Activity Reporting:`,
+    ``,
+    `*#${t.num} ${t.title}*`,
+    `Priority: ${PRIORITY_WORD[t.priority] ?? t.priority}`,
+  ];
+  if (t.dueDate) lines.push(`Due: ${DUE.format(new Date(`${t.dueDate}T00:00:00Z`))}`);
+  lines.push(``, `Open it and post updates here: ${t.url}`);
+  return lines.join("\n");
+}

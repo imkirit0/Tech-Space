@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { LampBadge, type Lamp } from "@/components/status-badge";
 
 export const TICKET_SOURCES = ["PHONE", "WHATSAPP", "EMAIL", "WALK_IN", "OTHER"] as const;
 export const TICKET_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
@@ -9,37 +10,70 @@ export type TicketPriority = (typeof TICKET_PRIORITIES)[number];
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 export type TicketCategory = (typeof TICKET_CATEGORIES)[number];
 
-export const label = (s: string) => s.replace("_", " ");
-
-const base = "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset";
-
-const STATUS: Record<TicketStatus, string> = {
-  OPEN: "bg-rose-50 text-rose-800 ring-rose-600/20",
-  TAKEN_UP: "bg-sky-50 text-sky-800 ring-sky-600/20",
-  SOLVED: "bg-emerald-50 text-emerald-800 ring-emerald-600/20",
-  DUPLICATE: "bg-slate-100 text-slate-600 ring-slate-500/20",
-  FORWARDED: "bg-violet-50 text-violet-800 ring-violet-600/20",
+const LABELS: Record<string, string> = {
+  PHONE: "Phone",
+  WHATSAPP: "WhatsApp",
+  EMAIL: "Email",
+  WALK_IN: "Walk-in",
+  OTHER: "Other",
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+  URGENT: "Urgent",
+  OPEN: "Open",
+  TAKEN_UP: "Taken up",
+  SOLVED: "Solved",
+  DUPLICATE: "Duplicate",
+  FORWARDED: "Forwarded",
+  TECH: "Tech",
+  NON_TECH: "Non-tech",
 };
-const CATEGORY: Record<TicketCategory, string> = {
-  TECH: "bg-indigo-50 text-indigo-800 ring-indigo-600/20",
-  NON_TECH: "bg-slate-100 text-slate-600 ring-slate-500/20",
-};
-const PRIORITY: Record<TicketPriority, string> = {
-  LOW: "bg-slate-100 text-slate-600 ring-slate-500/20",
-  MEDIUM: "bg-sky-50 text-sky-800 ring-sky-600/20",
-  HIGH: "bg-amber-50 text-amber-800 ring-amber-600/25",
-  URGENT: "bg-rose-50 text-rose-800 ring-rose-600/20",
+export const label = (s: string) => LABELS[s] ?? s.replace("_", " ");
+
+const STATUS_LAMP: Record<TicketStatus, Lamp> = {
+  OPEN: "amber",
+  TAKEN_UP: "blue",
+  FORWARDED: "violet",
+  SOLVED: "green",
+  DUPLICATE: "slate",
 };
 
 export const TicketStatusBadge = ({ status }: { status: TicketStatus }) => (
-  <span className={cn(base, STATUS[status])}>{label(status)}</span>
+  <LampBadge lamp={STATUS_LAMP[status]}>{label(status)}</LampBadge>
 );
+
+/*
+ * Priority reads as brightness: urgent is the brightest mark on the counter,
+ * low recedes. Four filled bars, lit from the left.
+ */
+const PRIORITY_LIT: Record<TicketPriority, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, URGENT: 4 };
+// One ink ramp, dim to bright; only urgent spends the brand red.
+const PRIORITY_INK: Record<TicketPriority, string> = {
+  LOW: "text-muted-foreground",
+  MEDIUM: "text-foreground/80",
+  HIGH: "text-foreground font-semibold",
+  URGENT: "text-red-700 font-semibold",
+};
+
 export const TicketPriorityBadge = ({ priority }: { priority: TicketPriority }) => (
-  <span className={cn(base, PRIORITY[priority])}>{label(priority)}</span>
+  <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap", PRIORITY_INK[priority])}>
+    <span className="flex items-end gap-px" aria-hidden>
+      {[0, 1, 2, 3].map((i) => (
+        <span
+          key={i}
+          className={cn("w-[3px] rounded-[1px]", i < PRIORITY_LIT[priority] ? "bg-current" : "bg-border")}
+          style={{ height: 5 + i * 2 }}
+        />
+      ))}
+    </span>
+    {label(priority)}
+  </span>
 );
-export const TicketSourceBadge = ({ source }: { source: TicketSource }) => (
-  <span className={cn(base, "bg-secondary text-secondary-foreground ring-border")}>{label(source)}</span>
-);
+
+const neutral = "inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium whitespace-nowrap text-secondary-foreground";
+
+export const TicketSourceBadge = ({ source }: { source: TicketSource }) => <span className={neutral}>{label(source)}</span>;
+
 export const TicketCategoryBadge = ({ category }: { category: TicketCategory }) => (
-  <span className={cn(base, CATEGORY[category])}>{label(category)}</span>
+  <span className={neutral}>{label(category)}</span>
 );
