@@ -78,6 +78,10 @@ export function TicketForm({ action, onSuccess }: Props) {
     const formEl = e.currentTarget;
     const form = new FormData(formEl);
     const files = (form.getAll("files") as File[]).filter((f) => f.size > 0);
+    if (files.reduce((sum, f) => sum + f.size, 0) > 4 * 1024 * 1024) {
+      toast.error("Attachments add up to more than 4 MB. Attach fewer or smaller files, or add more after creating the ticket.");
+      return;
+    }
     const input: TicketInput = {
       title: String(form.get("title") ?? ""),
       description: String(form.get("description") ?? "") || undefined,
@@ -193,7 +197,7 @@ export function TicketForm({ action, onSuccess }: Props) {
             className="h-auto py-1.5"
             accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt"
           />
-          <p className="text-xs text-muted-foreground">Up to 5 files, 5 MB each: images, PDF, Word, Excel or text.</p>
+          <p className="text-xs text-muted-foreground">Up to 5 files, 4 MB in total: images, PDF, Word, Excel or text.</p>
         </div>
       </fieldset>
 

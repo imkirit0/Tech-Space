@@ -174,7 +174,8 @@ const ALLOWED_MIME = new Set([
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain",
 ]);
-const MAX_FILE = 5 * 1024 * 1024;
+// Vercel caps a request body at 4.5 MB, so one upload (all files together) stays under 4 MB.
+const MAX_UPLOAD = 4 * 1024 * 1024;
 
 export async function uploadAttachments(ticketId: string, formData: FormData): Promise<Result> {
   const user = await requireTech();
@@ -184,8 +185,9 @@ export async function uploadAttachments(ticketId: string, formData: FormData): P
     const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
     if (files.length === 0) return { ok: false, error: "No files selected" };
     if (files.length > 5) return { ok: false, error: "Max 5 files at a time" };
+    if (files.reduce((sum, f) => sum + f.size, 0) > MAX_UPLOAD)
+      return { ok: false, error: "Files add up to more than 4 MB. Upload them one or two at a time." };
     for (const f of files) {
-      if (f.size > MAX_FILE) return { ok: false, error: `${f.name} is over 5 MB` };
       if (!ALLOWED_MIME.has(f.type)) return { ok: false, error: `${f.name}: file type not allowed` };
     }
     const payloads = [];

@@ -9,9 +9,8 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.18.191", "192.168.18.*"],
   experimental: {
     serverActions: {
-      // Ticket attachments: 5 files x 5 MB + multipart overhead.
-      // Next's default 1 MB would reject real screenshots before the action runs.
-      bodySizeLimit: "26mb",
+      // Ticket attachments: up to 4 MB per upload (Vercel caps request bodies at 4.5 MB).
+      bodySizeLimit: "5mb",
     },
   },
 };

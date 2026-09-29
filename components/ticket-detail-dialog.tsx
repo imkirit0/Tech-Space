@@ -123,7 +123,12 @@ export function TicketDetailDialog({
     if (!row) return;
     const formEl = e.currentTarget;
     const fd = new FormData(formEl);
-    const hasFile = fd.getAll("files").some((f) => f instanceof File && f.size > 0);
+    const picked = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+    const hasFile = picked.length > 0;
+    if (picked.reduce((sum, f) => sum + f.size, 0) > 4 * 1024 * 1024) {
+      toast.error("Files add up to more than 4 MB. Upload them one or two at a time.");
+      return;
+    }
     if (!hasFile) {
       toast.error("Choose at least one file first");
       return;
