@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, SearchX } from "lucide-react";
-import { deleteActivity } from "@/app/activities/actions";
+import { Trash2, SearchX, MessageSquare } from "lucide-react";
+import { deleteActivity, commentActivity } from "@/app/activities/actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/section";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusBadge, type ActivityStatus } from "@/components/status-badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { fmtDay } from "@/lib/dates";
@@ -24,11 +26,44 @@ type Row = {
   assignedBy: string;
   timeTaken: number;
   deadline: string | null;
+  managerComment: string | null;
+  commentedBy: string | null;
 };
+
+/** Manager feedback line, shown under an activity to staff and managers alike. */
+export function ManagerComment({ by, text }: { by: string | null; text: string }) {
+  return (
+    <p className="mt-1.5 flex gap-1.5 rounded-md bg-accent/60 px-2 py-1 text-xs text-accent-foreground">
+      <MessageSquare className="mt-px size-3.5 shrink-0" aria-hidden />
+      <span className="break-words">
+        <span className="font-semibold">{by ?? "Manager"}:</span> {text}
+      </span>
+    </p>
+  );
+}
 
 export function ManagerActivityTable({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState<Row | null>(null);
+  const [commenting, setCommenting] = useState<Row | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function handleComment(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const comment = String(new FormData(e.currentTarget).get("comment") ?? "");
+    setPending(true);
+    try {
+      const result = await commentActivity(commenting!.id, comment);
+      if (!result.ok) return void toast.error(result.error);
+      toast.success(comment.trim() ? "Comment saved" : "Comment removed");
+      setCommenting(null);
+      router.refresh();
+    } catch {
+      toast.error("Couldn't save. Your session may have expired, so refresh the page.");
+    } finally {
+      setPending(false);
+    }
+  }
 
   async function handleDelete(id: string) {
     let result: Awaited<ReturnType<typeof deleteActivity>>;
@@ -53,6 +88,20 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
       </EmptyState>
     );
   }
+
+  const commentButton = (row: Row) =>
+    row.status === "COMPLETED" ? (
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        aria-label={`${row.managerComment ? "Edit comment on" : "Comment on"} ${row.employeeName}'s activity`}
+        title={row.managerComment ? "Edit comment" : "Comment"}
+        className={row.managerComment ? "text-primary" : "text-muted-foreground"}
+        onClick={() => setCommenting(row)}
+      >
+        <MessageSquare />
+      </Button>
+    ) : null;
 
   const deleteButton = (row: Row) => (
     <Button
@@ -84,8 +133,12 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
                 <span>By {row.assignedBy}</span>
                 {row.deadline && <span>Due {fmtDay(row.deadline)}</span>}
               </div>
+              {row.managerComment && <ManagerComment by={row.commentedBy} text={row.managerComment} />}
             </div>
-            {deleteButton(row)}
+            <div className="flex shrink-0 flex-col">
+              {commentButton(row)}
+              {deleteButton(row)}
+            </div>
           </li>
         ))}
       </ul>
@@ -102,7 +155,7 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
               <TableHead>Assigned by</TableHead>
               <TableHead className="text-right">Hours</TableHead>
               <TableHead>Deadline</TableHead>
-              <TableHead className="w-12 pr-5">
+              <TableHead className="w-20 pr-5">
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
@@ -121,6 +174,7 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
                   <p className="truncate" title={row.description ?? row.activity}>
                     {row.activity}
                   </p>
+                  {row.managerComment && <ManagerComment by={row.commentedBy} text={row.managerComment} />}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={row.status} />
@@ -130,12 +184,40 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
                 <TableCell className="whitespace-nowrap text-muted-foreground">
                   {row.deadline ? fmtDay(row.deadline) : "—"}
                 </TableCell>
-                <TableCell className="pr-5 text-right">{deleteButton(row)}</TableCell>
+                <TableCell className="pr-5 text-right whitespace-nowrap">
+                  {commentButton(row)}
+                  {deleteButton(row)}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={!!commenting} onOpenChange={(open) => !open && setCommenting(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Comment on {commenting?.employeeName}'s work</DialogTitle>
+            <DialogDescription>{commenting?.activity}</DialogDescription>
+          </DialogHeader>
+          {commenting && (
+            <form onSubmit={handleComment} className="flex flex-col gap-4">
+              <Textarea
+                name="comment"
+                aria-label="Comment"
+                defaultValue={commenting.managerComment ?? ""}
+                maxLength={1000}
+                rows={3}
+                autoFocus
+                placeholder="Feedback the staff member will see on this activity. Leave empty to remove."
+              />
+              <Button type="submit" size="lg" disabled={pending}>
+                {pending ? "Saving…" : "Save comment"}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deleting}

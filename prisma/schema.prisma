@@ -12,6 +12,7 @@ enum Role {
   MANAGER
 }
 enum Status {
+  NOT_STARTED
   PENDING
   IN_PROGRESS
   COMPLETED
@@ -62,6 +63,10 @@ model Activity {
   status       Status
   deadline     DateTime? @db.Date
   timeTaken    Decimal  @db.Decimal(5, 2)
+  // Manager feedback on completed work; name kept as text like employeeName.
+  managerComment String?
+  commentedBy    String?
+  commentedAt    DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

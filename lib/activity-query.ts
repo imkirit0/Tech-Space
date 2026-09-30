@@ -11,7 +11,7 @@ export type ActivityFilters = {
   search?: string;
 };
 
-const STATUSES: Status[] = ["PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"];
+const STATUSES: Status[] = ["NOT_STARTED", "PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"];
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Shared, hardened searchParams → filters parsing for the manager list and

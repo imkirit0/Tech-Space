@@ -34,6 +34,8 @@ export default async function ActivitiesPage() {
       deadline: r.deadline ? dateToISO(r.deadline) : null,
       timeTaken: Number(r.timeTaken),
       locked: isLocked(date, locks),
+      managerComment: r.managerComment,
+      commentedBy: r.commentedBy,
     };
   });
 

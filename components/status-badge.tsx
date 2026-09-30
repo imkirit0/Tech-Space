@@ -1,11 +1,11 @@
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const STATUSES = ["PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"] as const;
+export const STATUSES = ["NOT_STARTED", "PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"] as const;
 export type ActivityStatus = (typeof STATUSES)[number];
 
 export function statusLabel(status: ActivityStatus): string {
-  return { PENDING: "Pending", IN_PROGRESS: "In progress", COMPLETED: "Completed", ON_HOLD: "On hold" }[status];
+  return { NOT_STARTED: "Not started", PENDING: "Pending", IN_PROGRESS: "In progress", COMPLETED: "Completed", ON_HOLD: "On hold" }[status];
 }
 
 /*
@@ -39,6 +39,7 @@ export function LampBadge({ lamp, children, className }: { lamp: Lamp; children:
 }
 
 const STATUS_LAMP: Record<ActivityStatus, Lamp> = {
+  NOT_STARTED: "slate",
   PENDING: "amber",
   IN_PROGRESS: "blue",
   COMPLETED: "green",

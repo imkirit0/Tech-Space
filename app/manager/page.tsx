@@ -65,6 +65,8 @@ export default async function ManagerPage({
     assignedBy: a.assignedBy,
     timeTaken: Number(a.timeTaken),
     deadline: a.deadline ? dateToISO(a.deadline) : null,
+    managerComment: a.managerComment,
+    commentedBy: a.commentedBy,
   }));
 
   const [feedActivities, recentTickets, recentForwards, recentNotes, recentTaskUpdates] = await Promise.all([

@@ -36,6 +36,7 @@ export async function GET(req: Request) {
     { header: "Status", key: "status", width: 14 },
     { header: "Deadline", key: "deadline", width: 12 },
     { header: "Time Taken", key: "timeTaken", width: 12 },
+    { header: "Manager Comment", key: "managerComment", width: 30 },
   ];
   ws.getRow(1).font = { bold: true };
   for (const r of rows) {
@@ -49,6 +50,7 @@ export async function GET(req: Request) {
       status: r.status,
       deadline: r.deadline ? dateToISO(r.deadline) : "",
       timeTaken: Number(r.timeTaken),
+      managerComment: r.managerComment ?? "",
     });
   }
   const buf = await wb.xlsx.writeBuffer();

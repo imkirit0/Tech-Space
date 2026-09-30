@@ -10,11 +10,11 @@ export const activitySchema = z
     activity: z.string().trim().min(1, "Activity is required"),
     description: z.string().trim().optional(),
     assignedBy: z.string().trim().min(1, "Assigned By is required"),
-    status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]),
+    status: z.enum(["NOT_STARTED", "PENDING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"]),
     deadline: iso.optional(),
     timeTaken: z.coerce
       .number()
-      .positive("Time Taken must be greater than zero")
+      .min(0, "Time Taken can't be negative")
       .max(24, "Time Taken cannot be more than 24 hours in a day"),
   })
   .refine((v) => !v.deadline || v.deadline >= v.date, {
@@ -93,3 +93,7 @@ export const registrationSchema = z.object({
 });
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;
+
+export const activityCommentSchema = z.object({
+  comment: z.string().trim().max(1000, "Comment is too long"),
+});

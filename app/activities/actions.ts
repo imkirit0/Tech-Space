@@ -2,8 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { safeErrorMessage } from "@/lib/errors";
 import { prisma } from "@/lib/db";
-import { requireUser } from "@/lib/session";
-import { activitySchema, type ActivityInput } from "@/lib/validation";
+import { requireUser, requireManager } from "@/lib/session";
+import { activitySchema, activityCommentSchema, type ActivityInput } from "@/lib/validation";
 import { isLocked } from "@/lib/period-lock";
 import { parseISODate } from "@/lib/dates";
 
@@ -86,6 +86,27 @@ export async function deleteActivity(id: string) {
       return { ok: false as const, error: "Forbidden" };
     await assertWritable(user, existing.date.toISOString().slice(0, 10));
     await prisma.activity.delete({ where: { id } });
+    revalidatePath("/dashboard");
+    revalidatePath("/activities");
+    revalidatePath("/manager");
+    return { ok: true as const };
+  } catch (e) {
+    return { ok: false as const, error: safeErrorMessage(e) };
+  }
+}
+
+/** Manager feedback on a completed activity. An empty comment clears it. */
+export async function commentActivity(id: string, comment: string) {
+  const user = await requireManager();
+  const parsed = activityCommentSchema.safeParse({ comment });
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0].message };
+  const text = parsed.data.comment || null;
+  try {
+    const r = await prisma.activity.updateMany({
+      where: { id, status: "COMPLETED" },
+      data: { managerComment: text, commentedBy: text && user.name, commentedAt: text && new Date() },
+    });
+    if (r.count === 0) return { ok: false as const, error: "Only completed activities can be commented on." };
     revalidatePath("/dashboard");
     revalidatePath("/activities");
     revalidatePath("/manager");

@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { updateActivity, deleteActivity } from "@/app/activities/actions";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, LockedBadge, type ActivityStatus } from "@/components/status-badge";
+import { ManagerComment } from "@/components/manager-activity-table";
 import { EmptyState } from "@/components/section";
 import {
   DropdownMenu,
@@ -31,6 +32,8 @@ type Row = {
   deadline: string | null;
   timeTaken: number;
   locked: boolean;
+  managerComment: string | null;
+  commentedBy: string | null;
 };
 
 export function ActivityHistory({ rows, maxDate }: { rows: Row[]; maxDate: string }) {
@@ -104,6 +107,7 @@ export function ActivityHistory({ rows, maxDate }: { rows: Row[]; maxDate: strin
                       {row.deadline && <span>Due {fmtDay(row.deadline)}</span>}
                       {row.locked && <LockedBadge />}
                     </div>
+                    {row.managerComment && <ManagerComment by={row.commentedBy} text={row.managerComment} />}
                   </div>
                   <p className="w-14 shrink-0 pt-px text-right font-medium tabular-nums">{formatHours(row.timeTaken)} h</p>
                   {row.locked ? (

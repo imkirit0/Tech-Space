@@ -11,7 +11,7 @@ import { STATUSES, statusLabel, LAMP, type ActivityStatus } from "@/components/s
 import { cn } from "@/lib/utils";
 import type { ActivityInput } from "@/lib/validation";
 
-const STATUS_LAMP = { PENDING: "amber", IN_PROGRESS: "blue", COMPLETED: "green", ON_HOLD: "slate" } as const;
+const STATUS_LAMP = { NOT_STARTED: "slate", PENDING: "amber", IN_PROGRESS: "blue", COMPLETED: "green", ON_HOLD: "slate" } as const;
 
 type ExistingActivity = {
   id: string;
@@ -92,32 +92,31 @@ export function ActivityForm({ action, maxDate, existing, onSuccess }: Props) {
         <Textarea id="description" name="description" defaultValue={existing?.description ?? ""} rows={2} />
       </div>
 
-      <div className="grid grid-cols-[1fr_7rem] gap-3">
+      <div className="grid grid-cols-[1fr_9rem] gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="assignedBy">Assigned by</Label>
           <Input id="assignedBy" name="assignedBy" defaultValue={existing?.assignedBy} placeholder="Name" required />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="timeTaken">Hours</Label>
+          <Label htmlFor="timeTaken">Hours {optional}</Label>
           <Input
             id="timeTaken"
             name="timeTaken"
             type="number"
             inputMode="decimal"
             step={0.25}
-            min={0.25}
+            min={0}
             max={24}
-            defaultValue={existing?.timeTaken}
+            defaultValue={existing?.timeTaken || undefined}
             placeholder="1.5"
             className="tabular-nums"
-            required
           />
         </div>
       </div>
 
       <fieldset className="flex flex-col gap-1.5">
         <legend className="mb-1.5 text-sm leading-none font-medium">Status</legend>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
           {STATUSES.map((s) => (
             <label
               key={s}

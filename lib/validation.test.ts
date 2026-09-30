@@ -13,8 +13,9 @@ describe("activitySchema", () => {
   it("rejects empty activity", () => {
     expect(activitySchema.safeParse({ ...base, activity: "" }).success).toBe(false);
   });
-  it("rejects timeTaken <= 0", () => {
-    expect(activitySchema.safeParse({ ...base, timeTaken: 0 }).success).toBe(false);
+  it("hours are optional (0) but never negative", () => {
+    expect(activitySchema.safeParse({ ...base, timeTaken: 0 }).success).toBe(true);
+    expect(activitySchema.safeParse({ ...base, timeTaken: -1 }).success).toBe(false);
   });
   it("rejects more than 24 hours for one entry", () => {
     expect(activitySchema.safeParse({ ...base, timeTaken: 24 }).success).toBe(true);
