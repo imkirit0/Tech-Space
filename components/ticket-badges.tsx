@@ -47,11 +47,11 @@ export const TicketStatusBadge = ({ status }: { status: TicketStatus }) => (
  * low recedes. Four filled bars, lit from the left.
  */
 const PRIORITY_LIT: Record<TicketPriority, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, URGENT: 4 };
-// One ink ramp, dim to bright; only urgent spends the brand red.
+// Cool to hot: low green, medium blue, high orange, urgent red.
 const PRIORITY_INK: Record<TicketPriority, string> = {
-  LOW: "text-muted-foreground",
-  MEDIUM: "text-foreground/80",
-  HIGH: "text-foreground font-semibold",
+  LOW: "text-emerald-700",
+  MEDIUM: "text-blue-700",
+  HIGH: "text-orange-700 font-semibold",
   URGENT: "text-red-700 font-semibold",
 };
 

@@ -85,3 +85,11 @@ export const taskUpdateSchema = z
     statusTo: z.enum(["TODO", "IN_PROGRESS", "BLOCKED", "DONE"]).optional(),
   })
   .refine((v) => v.body.length > 0 || v.statusTo, { message: "Write an update first", path: ["body"] });
+
+export const registrationSchema = z.object({
+  date: iso.refine((d) => !isFutureISO(d), "Future dates are not allowed"),
+  program: z.string().trim().min(1, "Program is required").max(40, "Program name is too long"),
+  count: z.coerce.number().int("Enter a whole number").min(0, "Count can't be negative").max(10000, "That count looks too high"),
+});
+
+export type RegistrationInput = z.infer<typeof registrationSchema>;

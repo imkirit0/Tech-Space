@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/db";
-import { requireTech } from "@/lib/session";
+import { requireUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireTech();
+    await requireUser();
   } catch (e) {
     const forbidden = e instanceof Error && e.message === "FORBIDDEN";
     return new Response(forbidden ? "Forbidden" : "Unauthorized", { status: forbidden ? 403 : 401 });

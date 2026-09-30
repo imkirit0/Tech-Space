@@ -59,7 +59,7 @@ export async function Board({
   ]);
   const phone = me?.phone ?? null;
   links.push({ href: "/tasks", label: "Tasks", badge: unreadTasks });
-  if (u.tech) links.push({ href: "/tickets", label: "Tickets" });
+  links.push({ href: "/tickets", label: "Tickets" }, { href: "/registrations", label: "Registrations" });
 
   const initials = u.name
     .split(/\s+/)

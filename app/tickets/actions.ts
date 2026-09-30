@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireTech } from "@/lib/session";
+import { requireTech, requireUser } from "@/lib/session";
 import { ticketSchema, solveSchema, forwardSchema, type TicketInput } from "@/lib/validation";
 import { safeErrorMessage } from "@/lib/errors";
 import { titlesSimilar } from "@/lib/duration";
@@ -11,7 +11,7 @@ type Result = { ok: true } | { ok: false; error: string };
 export async function createTicket(
   input: TicketInput
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  const user = await requireTech();
+  const user = await requireUser();
   const parsed = ticketSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const v = parsed.data;
@@ -178,7 +178,7 @@ const ALLOWED_MIME = new Set([
 const MAX_UPLOAD = 4 * 1024 * 1024;
 
 export async function uploadAttachments(ticketId: string, formData: FormData): Promise<Result> {
-  const user = await requireTech();
+  const user = await requireUser();
   try {
     const exists = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { id: true } });
     if (!exists) return { ok: false, error: "Ticket not found" };
@@ -219,7 +219,7 @@ export type TicketDetail = {
 };
 
 export async function getTicketDetail(id: string): Promise<{ ok: true; detail: TicketDetail } | { ok: false; error: string }> {
-  await requireTech();
+  await requireUser();
   try {
     const t = await prisma.ticket.findUnique({
       where: { id },

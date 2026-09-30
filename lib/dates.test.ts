@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dateToISO, fmtDay, fmtDayLong, isFutureISO, parseISODate, todayISO } from "./dates";
+import { dateToISO, fmtDay, fmtDayLong, isFutureISO, parseISODate, periodRange, todayISO } from "./dates";
 
 describe("dates", () => {
   it("todayISO returns YYYY-MM-DD", () => {
@@ -20,5 +20,20 @@ describe("dates", () => {
   it("fmtDay keeps the calendar day regardless of server time zone", () => {
     expect(fmtDay("2026-08-01")).toBe("1 Aug");
     expect(fmtDayLong("2026-09-29")).toMatch(/^Tue, 29 Sept?,? 2026$/);
+  });
+});
+
+describe("periodRange", () => {
+  it("day is the date itself", () => {
+    expect(periodRange("2026-09-30", "day")).toEqual(["2026-09-30", "2026-09-30"]);
+  });
+  it("week runs Monday to Sunday", () => {
+    expect(periodRange("2026-09-30", "week")).toEqual(["2026-09-28", "2026-10-04"]); // Wed
+    expect(periodRange("2026-10-04", "week")).toEqual(["2026-09-28", "2026-10-04"]); // Sun
+    expect(periodRange("2026-09-28", "week")).toEqual(["2026-09-28", "2026-10-04"]); // Mon
+  });
+  it("month covers the whole month, leap Feb included", () => {
+    expect(periodRange("2026-09-30", "month")).toEqual(["2026-09-01", "2026-09-30"]);
+    expect(periodRange("2028-02-10", "month")).toEqual(["2028-02-01", "2028-02-29"]);
   });
 });

@@ -40,7 +40,6 @@ export default async function TicketsPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
-  if (!user.tech) redirect("/");
 
   const params = await searchParams;
   const get = (key: string): string | undefined => {
@@ -258,7 +257,7 @@ export default async function TicketsPage({
               );
             })}
           </nav>
-          <TicketsTable rows={rows} isManager={user.role === "MANAGER"} now={renderedAt} />
+          <TicketsTable rows={rows} isManager={user.role === "MANAGER"} canWork={user.tech} now={renderedAt} />
         </Section>
       </main>
     </div>

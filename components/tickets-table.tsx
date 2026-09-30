@@ -131,7 +131,18 @@ const TITLE_INK: Record<TicketPriority, string> = {
   LOW: "font-medium text-muted-foreground",
 };
 
-export function TicketsTable({ rows, isManager, now }: { rows: TicketRow[]; isManager: boolean; now: number }) {
+export function TicketsTable({
+  rows,
+  isManager,
+  canWork,
+  now,
+}: {
+  rows: TicketRow[];
+  isManager: boolean;
+  /** Tech desk only: take up, solve, forward, etc. Other staff raise and view. */
+  canWork: boolean;
+  now: number;
+}) {
   const router = useRouter();
   const [solving, setSolving] = useState<TicketRow | null>(null);
   const [note, setNote] = useState("");
@@ -210,6 +221,7 @@ export function TicketsTable({ rows, isManager, now }: { rows: TicketRow[]; isMa
 
   /** The one action that moves this ticket forward, shown as a button. */
   function PrimaryAction({ row }: { row: TicketRow }) {
+    if (!canWork) return null;
     const no = ticketNo(row.num);
     const busy = busyId === row.id;
     switch (row.status) {
@@ -276,6 +288,7 @@ export function TicketsTable({ rows, isManager, now }: { rows: TicketRow[]; isMa
   }
 
   function MoreActions({ row }: { row: TicketRow }) {
+    if (!canWork) return null;
     const no = ticketNo(row.num);
     const active = row.status === "OPEN" || row.status === "TAKEN_UP" || row.status === "FORWARDED";
     const items: React.ReactNode[] = [];

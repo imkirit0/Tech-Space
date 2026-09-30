@@ -46,6 +46,7 @@ model User {
   tasksCreated   Task[]       @relation("TaskCreator")
   taskUpdates    TaskUpdate[] @relation("TaskUpdateAuthor")
   taskReads      TaskRead[]
+  registrations  Registration[]
 }
 
 model Activity {
@@ -244,4 +245,22 @@ model TaskRead {
   lastReadAt DateTime @default(now())
 
   @@id([userId, taskId])
+}
+
+// ── Registrations: daily course sign-up counts staff log per program ──
+
+model Registration {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  // Free text (Tally, IAB, MOS…) so new programs need no code change.
+  program   String
+  count     Int
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // One figure per person, day and program: re-entering corrects it.
+  @@unique([userId, date, program])
+  @@index([date])
 }
