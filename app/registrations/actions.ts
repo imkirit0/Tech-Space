@@ -31,7 +31,7 @@ export async function saveRegistration(input: RegistrationInput): Promise<Result
         update: { count: v.count },
       });
     }
-    revalidatePath("/registrations");
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: safeErrorMessage(e) };
@@ -45,7 +45,7 @@ export async function deleteRegistration(id: string): Promise<Result> {
     if (!existing) return { ok: false, error: "Not found" };
     if (user.role !== "MANAGER" && existing.userId !== user.id) return { ok: false, error: "Forbidden" };
     await prisma.registration.delete({ where: { id } });
-    revalidatePath("/registrations");
+    revalidatePath("/", "layout");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: safeErrorMessage(e) };

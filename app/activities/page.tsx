@@ -8,6 +8,7 @@ import { Board } from "@/components/nav";
 import { Section } from "@/components/section";
 import { AddActivityDialog } from "@/components/add-activity-dialog";
 import { ActivityHistory } from "@/components/activity-history";
+import { MyRegistrations } from "@/components/my-registrations";
 
 export const metadata = { title: "My Activities" };
 
@@ -58,6 +59,7 @@ export default async function ActivitiesPage() {
         ]}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+        <MyRegistrations userId={user.id} today={today} />
         <Section flush>
           <ActivityHistory rows={rows} maxDate={today} />
         </Section>

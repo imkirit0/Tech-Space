@@ -48,7 +48,7 @@ export function AddRegistrationDialog({ today, programs }: { today: string; prog
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="board" size="lg" />}>
+      <DialogTrigger render={<Button />}>
         <Plus className="size-4" aria-hidden />
         Add registrations
       </DialogTrigger>
@@ -56,7 +56,7 @@ export function AddRegistrationDialog({ today, programs }: { today: string; prog
         <DialogHeader>
           <DialogTitle>Add registrations</DialogTitle>
           <DialogDescription>
-            How many signed up for a program that day. Entering the same program and day again replaces the count; 0 removes it.
+            How many registered for an examination that day. Entering the same examination and day again replaces the count; 0 removes it.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -65,7 +65,7 @@ export function AddRegistrationDialog({ today, programs }: { today: string; prog
             <Input id="reg-date" name="date" type="date" defaultValue={today} max={today} required />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reg-program">Program</Label>
+            <Label htmlFor="reg-program">Examination</Label>
             <Input
               id="reg-program"
               name="program"
@@ -73,7 +73,7 @@ export function AddRegistrationDialog({ today, programs }: { today: string; prog
               required
               maxLength={40}
               autoComplete="off"
-              placeholder="Tally, IAB, MOS… or type a new one"
+              placeholder="Pick from the list, or type a new one"
             />
             <datalist id="reg-programs">
               {programs.map((p) => (
@@ -82,7 +82,7 @@ export function AddRegistrationDialog({ today, programs }: { today: string; prog
             </datalist>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reg-count">Registrations</Label>
+            <Label htmlFor="reg-count">Number registered</Label>
             <Input id="reg-count" name="count" type="number" inputMode="numeric" min={0} max={10000} step={1} required />
           </div>
           <Button type="submit" size="lg" disabled={pending}>
@@ -91,6 +91,48 @@ export function AddRegistrationDialog({ today, programs }: { today: string; prog
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Count cell you can type over; saves on Enter or when you click away. */
+export function EditableCount({ date, program, count }: { date: string; program: string; count: number }) {
+  const router = useRouter();
+
+  async function save(input: HTMLInputElement) {
+    const next = Number(input.value);
+    if (next === count) return;
+    // Removing an entry is the bin button's job, so an emptied or zero box just snaps back.
+    if (!Number.isInteger(next) || next < 1) return void (input.value = String(count));
+    try {
+      const r = await saveRegistration({ date, program, count: next });
+      if (!r.ok) {
+        input.value = String(count);
+        return void toast.error(r.error);
+      }
+      toast.success("Count updated");
+      router.refresh();
+    } catch {
+      input.value = String(count);
+      toast.error(SESSION_ERROR);
+    }
+  }
+
+  return (
+    <Input
+      // Re-mount when the saved value changes so the box always shows what's stored.
+      key={count}
+      type="number"
+      inputMode="numeric"
+      min={1}
+      max={10000}
+      step={1}
+      defaultValue={count}
+      aria-label={`Count for ${program}`}
+      title="Click to change the count"
+      className="ml-auto h-8 w-20 text-right tabular-nums"
+      onBlur={(e) => save(e.currentTarget)}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+    />
   );
 }
 
