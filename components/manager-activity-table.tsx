@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusBadge, type ActivityStatus } from "@/components/status-badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { fmtDay } from "@/lib/dates";
+import { fmtDay, fmtDayLong } from "@/lib/dates";
 import { formatHours } from "@/lib/hours";
 
 type Row = {
@@ -28,7 +28,19 @@ type Row = {
   deadline: string | null;
   managerComment: string | null;
   commentedBy: string | null;
+  commentedAt: string | null;
+  loggedAt: string;
+  editedAt: string | null;
 };
+
+function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-medium break-words">{children}</dd>
+    </div>
+  );
+}
 
 /** Manager feedback line, shown under an activity to staff and managers alike. */
 export function ManagerComment({ by, text }: { by: string | null; text: string }) {
@@ -46,6 +58,7 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState<Row | null>(null);
   const [commenting, setCommenting] = useState<Row | null>(null);
+  const [viewing, setViewing] = useState<Row | null>(null);
   const [pending, setPending] = useState(false);
 
   async function handleComment(e: React.FormEvent<HTMLFormElement>) {
@@ -121,12 +134,18 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
       <ul className="divide-y md:hidden">
         {rows.map((row) => (
           <li key={row.id} className="flex gap-3 px-4 py-3.5">
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setViewing(row)}>
               <p className="text-xs text-muted-foreground">
                 <span className="font-semibold text-foreground">{row.employeeName}</span>
                 {row.designation && ` · ${row.designation}`} · {row.date ? fmtDay(row.date) : "—"}
               </p>
-              <p className="mt-1 font-medium break-words">{row.activity}</p>
+              <button
+                type="button"
+                className="mt-1 block text-left font-medium break-words hover:underline"
+                onClick={() => setViewing(row)}
+              >
+                {row.activity}
+              </button>
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 <StatusBadge status={row.status} />
                 <span className="font-medium text-foreground tabular-nums">{formatHours(row.timeTaken)} h</span>
@@ -162,7 +181,7 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} className="cursor-pointer" onClick={() => setViewing(row)}>
                 <TableCell className="pl-5 whitespace-nowrap text-muted-foreground">
                   {row.date ? fmtDay(row.date) : "—"}
                 </TableCell>
@@ -171,9 +190,14 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
                   {row.designation && <p className="text-xs text-muted-foreground">{row.designation}</p>}
                 </TableCell>
                 <TableCell className="max-w-80">
-                  <p className="truncate" title={row.description ?? row.activity}>
+                  <button
+                    type="button"
+                    className="block max-w-full truncate text-left hover:underline"
+                    title="View details"
+                    onClick={() => setViewing(row)}
+                  >
                     {row.activity}
-                  </p>
+                  </button>
                   {row.managerComment && <ManagerComment by={row.commentedBy} text={row.managerComment} />}
                 </TableCell>
                 <TableCell>
@@ -184,7 +208,7 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
                 <TableCell className="whitespace-nowrap text-muted-foreground">
                   {row.deadline ? fmtDay(row.deadline) : "—"}
                 </TableCell>
-                <TableCell className="pr-5 text-right whitespace-nowrap">
+                <TableCell className="pr-5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   {commentButton(row)}
                   {deleteButton(row)}
                 </TableCell>
@@ -194,7 +218,48 @@ export function ManagerActivityTable({ rows }: { rows: Row[] }) {
         </Table>
       </div>
 
-      <Dialog open={!!commenting} onOpenChange={(open) => !open && setCommenting(null)}>
+      <Dialog open={!!viewing} onOpenChange={(open) => !open && setViewing(null)}>
+        <DialogContent className="sm:max-w-lg">
+          {viewing && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="break-words">{viewing.activity}</DialogTitle>
+                <DialogDescription>
+                  {viewing.employeeName}
+                  {viewing.designation && ` · ${viewing.designation}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div>
+                <p className="text-xs text-muted-foreground">Description</p>
+                <p className="mt-0.5 text-sm break-words whitespace-pre-wrap">
+                  {viewing.description || <span className="text-muted-foreground">No description given.</span>}
+                </p>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <Detail label="Status">
+                  <StatusBadge status={viewing.status} />
+                </Detail>
+                <Detail label="Hours">{formatHours(viewing.timeTaken)}</Detail>
+                <Detail label="Date">{viewing.date ? fmtDayLong(viewing.date) : "—"}</Detail>
+                <Detail label="Deadline">{viewing.deadline ? fmtDayLong(viewing.deadline) : "—"}</Detail>
+                <Detail label="Assigned by">{viewing.assignedBy}</Detail>
+                <Detail label="Logged">{viewing.loggedAt}</Detail>
+                {viewing.editedAt && <Detail label="Last edited">{viewing.editedAt}</Detail>}
+              </dl>
+              {viewing.managerComment && (
+                <div>
+                  <ManagerComment by={viewing.commentedBy} text={viewing.managerComment} />
+                  {viewing.commentedAt && (
+                    <p className="mt-1 text-xs text-muted-foreground">Commented {viewing.commentedAt}</p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!commenting}onOpenChange={(open) => !open && setCommenting(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Comment on {commenting?.employeeName}'s work</DialogTitle>

@@ -20,7 +20,10 @@ export const metadata = { title: "Manager" };
 // ponytail: fixed on-screen cap; add pagination if managers need to browse past it (export has everything)
 const TABLE_LIMIT = 200;
 
-const truncateTitle = (s: string) => (s.length > 40 ? `${s.slice(0, 39)}…` : s);
+// Formatted on the server so the client never re-renders timestamps in another zone.
+const STAMP = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
+
+const truncateTitle =(s: string) => (s.length > 40 ? `${s.slice(0, 39)}…` : s);
 
 export default async function ManagerPage({
   searchParams,
@@ -67,6 +70,13 @@ export default async function ManagerPage({
     deadline: a.deadline ? dateToISO(a.deadline) : null,
     managerComment: a.managerComment,
     commentedBy: a.commentedBy,
+    commentedAt: a.commentedAt ? STAMP.format(a.commentedAt) : null,
+    loggedAt: STAMP.format(a.createdAt),
+    // Prisma bumps updatedAt on comments too, so only call it edited when it moved past both.
+    editedAt:
+      a.updatedAt.getTime() - Math.max(a.createdAt.getTime(), a.commentedAt?.getTime() ?? 0) > 1000
+        ? STAMP.format(a.updatedAt)
+        : null,
   }));
 
   const [feedActivities, recentTickets, recentForwards, recentNotes, recentTaskUpdates] = await Promise.all([
