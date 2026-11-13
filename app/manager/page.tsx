@@ -4,11 +4,15 @@ import { ChevronRight, Download } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { buildActivityWhere, parseActivityFilters } from "@/lib/activity-query";
-import { dateToISO, fmtDay, fmtDayLong, parseISODate, todayISO } from "@/lib/dates";
-import { examCountsByDate } from "@/lib/exam-counts";
+import { dateToISO, fmtDay, parseISODate, todayISO } from "@/lib/dates";
 import { toManagerRow } from "@/lib/activity-row";
+import { outstandingByVoucher, rateSinceISO, voucherStock } from "@/lib/vouchers";
+import { VoucherOrderAlert } from "@/components/voucher-alert";
+import { Pagination } from "@/components/pagination";
+import { PAGE_SIZE, pageParam, pageWindow } from "@/lib/paging";
+import { VoucherStockTable } from "@/components/voucher-stock-table";
 import { formatHours } from "@/lib/hours";
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDuration } from "@/lib/duration";
 import { ticketNo } from "@/lib/whatsapp";
 import { statusChangeText } from "@/lib/tasks";
@@ -16,16 +20,13 @@ import { Board } from "@/components/nav";
 import { Section } from "@/components/section";
 import { ActivityFilters as ActivityFiltersBar } from "@/components/activity-filters";
 import { ManagerActivityTable } from "@/components/manager-activity-table";
-import { LockPanel } from "@/components/lock-panel";
 import { LampBadge } from "@/components/status-badge";
 import { RecentActivityFeed } from "@/components/recent-activity-feed";
 import { buttonVariants } from "@/components/ui/button";
 
 export const metadata = { title: "Manager" };
 
-// ponytail: fixed on-screen cap; add pagination if managers need to browse past it (export has everything)
-const TABLE_LIMIT = 200;
-const EXAM_DAYS = 14;
+const VOUCHER_ISSUES = 10;
 
 const truncateTitle =(s: string) => (s.length > 40 ? `${s.slice(0, 39)}…` : s);
 
@@ -38,10 +39,11 @@ export default async function ManagerPage({
   if (!user) redirect("/signin");
   if (user.role !== "MANAGER") redirect("/dashboard");
 
-  const filters = parseActivityFilters(await searchParams);
-  const examScope = { employeeName: filters.employeeName, dateFrom: filters.dateFrom, dateTo: filters.dateTo };
+  const params = await searchParams;
+  const filters = parseActivityFilters(params);
+  const page = pageParam(params);
 
-  const [total, completed, pending, submittedToday, staffCount, activities, locks, examActivities, registrations] = await Promise.all([
+  const [total, completed, pending, submittedToday, staffCount, activities] = await Promise.all([
     prisma.activity.count({ where: buildActivityWhere(filters) }),
     prisma.activity.count({ where: buildActivityWhere({ ...filters, status: "COMPLETED" }) }),
     prisma.activity.count({ where: buildActivityWhere({ ...filters, status: "PENDING" }) }),
@@ -54,42 +56,30 @@ export default async function ManagerPage({
     prisma.activity.findMany({
       where: buildActivityWhere(filters),
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      take: TABLE_LIMIT,
-    }),
-    prisma.periodLock.findMany({
-      include: { lockedBy: { select: { name: true } } },
-      orderBy: { lockedAt: "desc" },
-    }),
-    // Exam counts follow only the date and employee filters, and are not capped by TABLE_LIMIT.
-    prisma.activity.findMany({
-      where: { AND: [buildActivityWhere(examScope), { activity: { contains: "exam", mode: "insensitive" } }] },
-      select: { date: true, activity: true },
-    }),
-    prisma.registration.findMany({
-      where: {
-        date: {
-          gte: examScope.dateFrom ? parseISODate(examScope.dateFrom) : undefined,
-          lte: examScope.dateTo ? parseISODate(examScope.dateTo) : undefined,
-        },
-        ...(examScope.employeeName && { user: { name: { contains: examScope.employeeName, mode: "insensitive" } } }),
-      },
-      select: { date: true, program: true, count: true },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
   ]);
 
-  const exams = examCountsByDate(
-    registrations.map((r) => ({ date: dateToISO(r.date), program: r.program, count: r.count })),
-    examActivities.map((a) => ({ date: dateToISO(a.date), activity: a.activity }))
-  );
-  // ponytail: one column per date, newest EXAM_DAYS only; narrow with From/To to see older dates.
-  const examDays = exams.days.slice(0, EXAM_DAYS);
-  const examRows = exams.exams
-    .map((exam) => ({ exam, total: examDays.reduce((s, d) => s + (d.counts.get(exam) ?? 0), 0) }))
-    .filter((r) => r.total > 0);
-  const sum = (counts: Map<string, number>) => [...counts.values()].reduce((s, n) => s + n, 0);
-  const examGrandTotal = examRows.reduce((s, r) => s + r.total, 0);
+  const today = todayISO();
 
   const rows = activities.map(toManagerRow);
+
+  const [voucherEntries, voucherOrders, voucherIssues] = await Promise.all([
+    prisma.voucherEntry.findMany({ select: { voucher: true, quantity: true, date: true } }),
+    prisma.voucherOrder.findMany({ select: { voucher: true, quantity: true, receipts: { select: { quantity: true } } } }),
+    prisma.voucherEntry.findMany({
+      where: { quantity: { lt: 0 } },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: VOUCHER_ISSUES,
+      include: { user: { select: { name: true } } },
+    }),
+  ]);
+  const vouchers = voucherStock(
+    voucherEntries.map((e) => ({ voucher: e.voucher, quantity: e.quantity, date: dateToISO(e.date) })),
+    rateSinceISO(todayISO()),
+    outstandingByVoucher(voucherOrders)
+  );
 
   const [staff, hoursToday] = await Promise.all([
     prisma.user.findMany({
@@ -207,15 +197,6 @@ export default async function ManagerPage({
   events.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const feedEvents = events.slice(0, 15);
 
-  const serializedLocks = locks.map((l) => ({
-    id: l.id,
-    label: l.label,
-    startDate: dateToISO(l.startDate),
-    endDate: dateToISO(l.endDate),
-    reason: l.reason,
-    lockedByName: l.lockedBy.name,
-    lockedAt: l.lockedAt.toISOString(),
-  }));
 
   const qs = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
@@ -225,11 +206,20 @@ export default async function ManagerPage({
 
   const filtered = qs.size > 0;
 
+  const activityPages = pageWindow(total, page);
+  const pageHref = (n: number) => {
+    const q = new URLSearchParams(qs);
+    if (n > 1) q.set("page", String(n));
+    return `/manager${q.size ? `?${q}` : ""}#activities`;
+  };
+  // A stale link past the end (e.g. after deletions) lands on the last page instead of an empty one.
+  if (page > activityPages.pageCount) redirect(pageHref(activityPages.pageCount));
+
   return (
     <div className="flex min-h-svh flex-col">
       <Board
         title="Manager"
-        subtitle="All employee activity: filter, export, and lock reporting periods."
+        subtitle="All employee activity: filter, export, and open any person's report."
         action={
           <a href={exportHref} className={buttonVariants({ variant: "board", size: "lg" })}>
             <Download className="size-4" aria-hidden />
@@ -250,6 +240,8 @@ export default async function ManagerPage({
         ]}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
+        <VoucherOrderAlert stock={vouchers} link />
+
         {staff.length > 0 && (
           <Section title="Staff" description="Open a person to see their full report: work, hours, tasks, tickets and registrations.">
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -283,80 +275,92 @@ export default async function ManagerPage({
           <ActivityFiltersBar key={qs.toString() || "empty"} />
         </Section>
 
-        <Section
-          flush
-          title="Activities"
-          description={
-            total > rows.length
-              ? `Showing the newest ${rows.length} of ${total}. Narrow the filters, or export to see them all.`
-              : `${total} ${total === 1 ? "entry" : "entries"}${filtered ? " match the filters" : ""}.`
-          }
-        >
-          <ManagerActivityTable rows={rows} />
-        </Section>
-
-        {examDays.length > 0 && (
+        <div id="activities" className="scroll-mt-4">
           <Section
             flush
-            title="Examination registrations"
+            title="Activities"
             description={
-              (exams.days.length > examDays.length
-                ? `Latest ${examDays.length} of ${exams.days.length} dates; set From and To above to see others.`
-                : `${examRows.length} ${examRows.length === 1 ? "examination" : "examinations"} across ${examDays.length} ${examDays.length === 1 ? "date" : "dates"}.`) +
-              " Logged by staff under My Activities; follows the Employee, From and To filters."
+              total > PAGE_SIZE
+                ? `${total} ${filtered ? "entries match the filters" : "entries"}, newest first.`
+                : `${total} ${total === 1 ? "entry" : "entries"}${filtered ? " match the filters" : ""}.`
             }
           >
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted hover:bg-muted">
-                  <TableHead className="sticky left-0 z-10 bg-muted pl-5">Examination</TableHead>
-                  {examDays.map((d) => (
-                    <TableHead key={d.date} className="text-right" title={fmtDayLong(d.date)}>
-                      {fmtDay(d.date)}
-                    </TableHead>
-                  ))}
-                  <TableHead className="pr-5 text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {examRows.map((r) => (
-                  <TableRow key={r.exam} className="group">
-                    <TableCell className="sticky left-0 z-10 bg-card pl-5 font-medium group-hover:bg-muted">
-                      {r.exam}
-                    </TableCell>
-                    {examDays.map((d) => (
-                      <TableCell key={d.date} className="text-right tabular-nums">
-                        {d.counts.get(r.exam) ?? <span className="text-muted-foreground/60">–</span>}
-                      </TableCell>
-                    ))}
-                    <TableCell className="pr-5 text-right font-semibold tabular-nums">{r.total}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow className="hover:bg-transparent">
-                  <TableCell className="sticky left-0 z-10 bg-muted pl-5 font-semibold">All examinations</TableCell>
-                  {examDays.map((d) => (
-                    <TableCell key={d.date} className="text-right font-semibold tabular-nums">
-                      {sum(d.counts)}
-                    </TableCell>
-                  ))}
-                  <TableCell className="pr-5 text-right font-semibold tabular-nums">{examGrandTotal}</TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
+            <ManagerActivityTable rows={rows} />
+            <Pagination window={activityPages} href={pageHref} label="Activity pages" />
           </Section>
-        )}
+        </div>
 
-        <RecentActivityFeed events={feedEvents} />
+        <Section
+          title="Exams"
+          description="Registrations, exams conducted and certificate dispatch — on their own page."
+          actions={
+            <Link href="/exams" className="text-sm font-medium text-primary hover:underline">
+              Open Exams
+            </Link>
+          }
+        >
+          <p className="text-sm text-muted-foreground">
+            Staff log exam registrations and batches under My Activities. Open the Exams page for per-exam totals, urgent vs normal certificate
+            dispatch, pass/fail/re-assessment figures and the full records.
+          </p>
+        </Section>
 
         <Section
           flush
-          title="Period locks"
-          description="Lock a month or date range after review. Employees can't change entries in it afterwards."
+          title="Vouchers"
+          description={
+            vouchers.length === 0
+              ? "No voucher stock recorded yet."
+              : `${vouchers.reduce((n, v) => n + v.inStock, 0)} in stock across ${vouchers.length} ${vouchers.length === 1 ? "voucher" : "vouchers"}. Staff issue them; every issue comes off the stock.`
+          }
+          actions={
+            <Link href="/vouchers" className="text-sm font-medium text-primary hover:underline">
+              Orders, stock and full history
+            </Link>
+          }
         >
-          <LockPanel locks={serializedLocks} />
+          {vouchers.length > 0 && <VoucherStockTable stock={vouchers} />}
+          {voucherIssues.length > 0 && (
+            <>
+              <p className="border-t bg-muted/30 px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase sm:px-5">
+                Latest vouchers issued
+              </p>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/60 hover:bg-muted/60">
+                    <TableHead className="pl-5">Date</TableHead>
+                    <TableHead>Voucher</TableHead>
+                    <TableHead className="text-right">Issued</TableHead>
+                    <TableHead>Issued to</TableHead>
+                    <TableHead>Issued by</TableHead>
+                    <TableHead className="pr-5">Note</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {voucherIssues.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="pl-5 text-muted-foreground">{fmtDay(dateToISO(e.date))}</TableCell>
+                      <TableCell className="font-medium">{e.voucher}</TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">{-e.quantity}</TableCell>
+                      <TableCell>
+                        {e.issuedTo}
+                        {e.channel && (
+                          <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">{e.channel}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{e.user.name}</TableCell>
+                      <TableCell className="max-w-56 truncate pr-5 text-muted-foreground" title={e.note ?? undefined}>
+                        {e.note || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          )}
         </Section>
+
+        <RecentActivityFeed events={feedEvents} />
       </main>
     </div>
   );

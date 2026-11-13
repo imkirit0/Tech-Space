@@ -1,20 +1,34 @@
 import { prisma } from "@/lib/db";
 import { dateToISO, fmtDayLong } from "@/lib/dates";
 import { Section, EmptyState } from "@/components/section";
+import { Pagination } from "@/components/pagination";
+import { pageWindow } from "@/lib/paging";
 import { AddRegistrationDialog, DeleteRegistrationButton, EditableCount } from "@/components/registration-controls";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Offered in the examination dropdown until someone logs them; any other name can be typed in.
 const DEFAULT_EXAMS = ["META EXAMINATION", "MOS EXAMINATION"];
-const SHOWN = 20;
+const PER_PAGE = 10;
 
 /** Staff panel: log how many registered for each examination on a day, and see their recent entries. */
-export async function MyRegistrations({ userId, today }: { userId: string; today: string }) {
+export async function MyRegistrations({
+  userId,
+  today,
+  page,
+  href,
+}: {
+  userId: string;
+  today: string;
+  page: number;
+  href: (page: number) => string;
+}) {
+  const pages = pageWindow(await prisma.registration.count({ where: { userId } }), page, PER_PAGE);
   const [entries, used] = await Promise.all([
     prisma.registration.findMany({
       where: { userId },
       orderBy: [{ date: "desc" }, { program: "asc" }],
-      take: SHOWN,
+      skip: pages.skip,
+      take: pages.size,
     }),
     prisma.registration.findMany({ distinct: ["program"], select: { program: true }, orderBy: { program: "asc" } }),
   ]);
@@ -24,6 +38,7 @@ export async function MyRegistrations({ userId, today }: { userId: string; today
   exams.sort();
 
   return (
+    <div id="registrations" className="scroll-mt-4">
     <Section
       flush
       title="Examination registrations"
@@ -65,6 +80,8 @@ export async function MyRegistrations({ userId, today }: { userId: string; today
           </TableBody>
         </Table>
       )}
+      <Pagination window={pages} href={href} label="Registration pages" />
     </Section>
+    </div>
   );
 }

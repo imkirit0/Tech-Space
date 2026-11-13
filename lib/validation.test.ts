@@ -45,6 +45,7 @@ const ticketBase = {
   title: "WiFi down in Lab 2",
   contactName: "Ravi",
   contactPhone: "9876543210",
+  branch: "Kochi",
   source: "PHONE",
   priority: "HIGH",
   category: "TECH",
@@ -60,6 +61,8 @@ describe("ticketSchema", () => {
     expect(ticketSchema.safeParse({ ...ticketBase, contactPhone: "123" }).success).toBe(false));
   it("rejects bad source", () =>
     expect(ticketSchema.safeParse({ ...ticketBase, source: "FAX" }).success).toBe(false));
+  it("requires a centre", () =>
+    expect(ticketSchema.safeParse({ ...ticketBase, branch: "" }).success).toBe(false));
   it("accepts optional tech fields", () => {
     expect(
       ticketSchema.safeParse({ ...ticketBase, ipAddress: "10.0.0.4", assetId: "SRV-02", branch: "Kochi" }).success

@@ -194,7 +194,7 @@ export function TicketDetailDialog({
                   {row.contactPhone}
                 </a>
               </Fact>
-              <Fact label="Branch">{row.branch || "—"}</Fact>
+              <Fact label="Centre">{row.branch || "—"}</Fact>
               <Fact label="IP address">
                 <span className="font-mono text-xs">{row.ipAddress || "—"}</span>
               </Fact>

@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/pagination";
+import { pageParam, pageWindow } from "@/lib/paging";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
@@ -65,12 +67,16 @@ export default async function TasksPage({
   const openWhere: Prisma.TaskWhereInput = { AND: [base, VIEWS.open.where] };
   const grabsWhere: Prisma.TaskWhereInput = { AND: [visibleTasksWhere(user), VIEWS.open.where, { assigneeId: null, shared: true }] };
 
+  const listWhere: Prisma.TaskWhereInput = { AND: [base, VIEWS[view].where] };
+  const pages = pageWindow(await prisma.task.count({ where: listWhere }), pageParam(params));
+
   const [tasks, counts, overdue, people, selected, unread, upForGrabs] = await Promise.all([
     prisma.task.findMany({
-      where: { AND: [base, VIEWS[view].where] },
+      where: listWhere,
       // Up-for-grabs first on the board, then most recent activity.
       orderBy: scope === "board" ? [{ assigneeId: { sort: "asc", nulls: "first" } }, { lastActivityAt: "desc" }] : { lastActivityAt: "desc" },
-      take: 200,
+      skip: pages.skip,
+      take: pages.size,
       include: {
         assignee: { select: { name: true } },
         createdBy: { select: { name: true } },
@@ -233,7 +239,7 @@ export default async function TasksPage({
                   return (
                     <li key={t.id}>
                       <Link
-                        href={href({ t: t.id })}
+                        href={href({ t: t.id, page: pages.page > 1 ? String(pages.page) : undefined })}
                         aria-current={on ? "true" : undefined}
                         className={cn(
                           "relative flex flex-col gap-1 px-4 py-3 transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:outline-none",
@@ -278,6 +284,12 @@ export default async function TasksPage({
                 })}
               </ul>
             )}
+            <Pagination
+              window={pages}
+              href={(n) => href({ t: selectedId, page: n > 1 ? String(n) : undefined })}
+              label="Task pages"
+              className="px-3 sm:px-3"
+            />
           </div>
 
           {/* Thread */}

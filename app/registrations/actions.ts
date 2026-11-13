@@ -20,7 +20,8 @@ export async function saveRegistration(input: RegistrationInput): Promise<Result
       where: { program: { equals: v.program, mode: "insensitive" } },
       select: { program: true },
     });
-    const program = known?.program ?? v.program;
+    // New names are stored in capitals, matching how the rest of the list is written.
+    const program = known?.program ?? v.program.replace(/\s+/g, " ").toUpperCase();
     const key = { userId: user.id, date: parseISODate(v.date), program };
     if (v.count === 0) {
       await prisma.registration.deleteMany({ where: key });

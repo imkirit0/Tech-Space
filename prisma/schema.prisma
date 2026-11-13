@@ -48,6 +48,9 @@ model User {
   taskUpdates    TaskUpdate[] @relation("TaskUpdateAuthor")
   taskReads      TaskRead[]
   registrations  Registration[]
+  examRecords    ExamRecord[]
+  voucherEntries VoucherEntry[]
+  voucherOrders  VoucherOrder[]
 }
 
 model Activity {
@@ -268,4 +271,80 @@ model Registration {
   // One figure per person, day and program: re-entering corrects it.
   @@unique([userId, date, program])
   @@index([date])
+}
+
+// One row per exam batch a staff member conducted: what was run, dispatched and the results.
+model ExamRecord {
+  id         String   @id @default(cuid())
+  date       DateTime @db.Date
+  // The certificate group this batch rolls up under (TALLY, IBMA…). Free text; totals group by it.
+  exam       String
+  // The specific certificate name within the group (optional).
+  certificateName String?
+  center     String?
+  vendor     String?
+  // Students: how many sat, passed, failed, and took a re-assessment.
+  conducted  Int      @default(0)
+  passed     Int      @default(0)
+  failed     Int      @default(0)
+  reassessed Int      @default(0)
+  // Certificates dispatched, split by priority. Dispatched total = urgent + normal.
+  urgent     Int      @default(0)
+  normal     Int      @default(0)
+  // Where the batch came through: GEMS or Forms.
+  source     String?
+  note       String?
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([date])
+  @@index([exam])
+  @@index([userId])
+}
+
+// ── Vouchers: exam voucher stock. One row per movement; stock = sum(quantity). ──
+
+model VoucherEntry {
+  id        String   @id @default(cuid())
+  // Free text (MOS, META…) so new voucher kinds need no code change.
+  voucher   String
+  // Positive = stock received, negative = vouchers issued.
+  quantity  Int
+  date      DateTime @db.Date
+  // Who the voucher went to (issues only).
+  issuedTo  String?
+  // For issues: whether it was given through GEMS or Forms.
+  channel   String?
+  note      String?
+  // Stock received against an order points back to it; who supplied it.
+  orderId   String?
+  order     VoucherOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  vendor    String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([voucher])
+  @@index([date])
+  @@index([orderId])
+}
+
+// An order placed with a supplier. Stock only goes up when a delivery is recorded against it
+// (a VoucherEntry with this orderId); an order can arrive in several deliveries.
+model VoucherOrder {
+  id        String   @id @default(cuid())
+  voucher   String
+  quantity  Int
+  orderedOn DateTime @db.Date
+  // Known at order time or filled in on delivery.
+  vendor    String?
+  note      String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  receipts  VoucherEntry[]
+
+  @@index([voucher])
 }

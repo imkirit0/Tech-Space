@@ -18,6 +18,8 @@ import { Board } from "@/components/nav";
 import { Section } from "@/components/section";
 import { NewTicketDialog } from "@/components/new-ticket-dialog";
 import { TicketsTable, type TicketRow } from "@/components/tickets-table";
+import { Pagination } from "@/components/pagination";
+import { pageHref, pageParam, paginate } from "@/lib/paging";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -71,7 +73,7 @@ export default async function TicketsPage({
   }
   const where: Prisma.TicketWhereInput = status ? { ...baseWhere, status } : baseWhere;
 
-  const [tickets, byStatus, solvedTodayCount] = await Promise.all([
+  const [tickets, byStatus, solvedTodayCount, assignStaff] = await Promise.all([
     prisma.ticket.findMany({
       where,
       include: {
@@ -88,6 +90,10 @@ export default async function TicketsPage({
     prisma.ticket.count({
       where: { ...baseWhere, status: "SOLVED", solvedAt: { gte: new Date(`${todayISO()}T00:00:00+05:30`) } },
     }),
+    // Tech-desk staff a manager can assign a ticket to.
+    user.role === "MANAGER"
+      ? prisma.user.findMany({ where: { active: true, tech: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })
+      : Promise.resolve([] as { id: string; name: string }[]),
   ]);
 
   // ponytail: in-memory sort, move to SQL ordering if ticket volume grows
@@ -139,6 +145,8 @@ export default async function TicketsPage({
   const counts = Object.fromEntries(byStatus.map((g) => [g.status, g._count._all])) as Partial<Record<TicketStatus, number>>;
   const allCount = Object.values(counts).reduce((a, b) => a + (b ?? 0), 0);
   const followUps = rows.filter((r) => r.needsFollowUp).length;
+  // Counts above cover every matching ticket; only the table is paged.
+  const pages = paginate(rows, pageParam(params));
   // One clock for server and client render so relative times hydrate identically.
   const renderedAt = Date.now();
 
@@ -257,7 +265,14 @@ export default async function TicketsPage({
               );
             })}
           </nav>
-          <TicketsTable rows={rows} isManager={user.role === "MANAGER"} canWork={user.tech} now={renderedAt} />
+          <TicketsTable
+            rows={pages.items}
+            isManager={user.role === "MANAGER"}
+            canWork={user.tech}
+            assignStaff={assignStaff}
+            now={renderedAt}
+          />
+          <Pagination window={pages} href={(n) => pageHref("/tickets", params, n)} label="Ticket pages" />
         </Section>
       </main>
     </div>

@@ -15,6 +15,7 @@ import {
   SearchX,
   Trash2,
   Undo2,
+  UserPlus,
 } from "lucide-react";
 import {
   takeUpTicket,
@@ -25,6 +26,7 @@ import {
   forwardTicket,
   takeBackTicket,
   followUpTicket,
+  assignTicket,
 } from "@/app/tickets/actions";
 import { buildWaLink, solvedMessage, ticketNo } from "@/lib/whatsapp";
 import { formatDuration, istStamp } from "@/lib/duration";
@@ -135,16 +137,21 @@ export function TicketsTable({
   rows,
   isManager,
   canWork,
+  assignStaff,
   now,
 }: {
   rows: TicketRow[];
   isManager: boolean;
   /** Tech desk only: take up, solve, forward, etc. Other staff raise and view. */
   canWork: boolean;
+  /** Tech-desk staff a manager can assign a ticket to. */
+  assignStaff: { id: string; name: string }[];
   now: number;
 }) {
   const router = useRouter();
   const [solving, setSolving] = useState<TicketRow | null>(null);
+  const [assigning, setAssigning] = useState<TicketRow | null>(null);
+  const [assignTo, setAssignTo] = useState("");
   const [note, setNote] = useState("");
   const [forwarding, setForwarding] = useState<TicketRow | null>(null);
   const [forwardTo, setForwardTo] = useState("");
@@ -209,6 +216,14 @@ export function TicketsTable({
     setFollowingUp(row);
     setFollowUpNote("");
   };
+  const openAssign = (row: TicketRow) => {
+    setAssigning(row);
+    // Default to the current taker if there is one, else the first staff.
+    const current = assignStaff.find((s) => s.name === row.takenByName);
+    setAssignTo(current?.id ?? assignStaff[0]?.id ?? "");
+  };
+  const canAssign = (row: TicketRow) =>
+    isManager && assignStaff.length > 0 && (row.status === "OPEN" || row.status === "TAKEN_UP" || row.status === "FORWARDED");
 
 
   if (rows.length === 0) {
@@ -347,6 +362,18 @@ export function TicketsTable({
     );
   }
 
+  function AssignButton({ row }: { row: TicketRow }) {
+    if (!canAssign(row)) return null;
+    const no = ticketNo(row.num);
+    const assigned = row.status !== "OPEN" && !!row.takenByName;
+    return (
+      <Button size="sm" variant="outline" aria-label={`${assigned ? "Reassign" : "Assign"} ${no}`} onClick={() => openAssign(row)}>
+        <UserPlus />
+        {assigned ? "Reassign" : "Assign"}
+      </Button>
+    );
+  }
+
   function TitleButton({ row }: { row: TicketRow }) {
     return (
       <button
@@ -395,6 +422,7 @@ export function TicketsTable({
             </p>
             <div className="mt-1 flex items-center gap-2">
               <PrimaryAction row={row} />
+              <AssignButton row={row} />
               <MoreActions row={row} />
             </div>
           </li>
@@ -449,6 +477,7 @@ export function TicketsTable({
                 <TableCell className="pr-5 align-top">
                   <div className="flex items-center justify-end gap-1">
                     <PrimaryAction row={row} />
+                    <AssignButton row={row} />
                     <MoreActions row={row} />
                   </div>
                 </TableCell>
@@ -551,6 +580,39 @@ export function TicketsTable({
             </div>
             <Button type="submit" size="lg" disabled={pending}>
               {pending ? "Saving…" : "Add follow-up"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!assigning} onOpenChange={(open) => !open && setAssigning(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign {assigning && ticketNo(assigning.num)}</DialogTitle>
+            <DialogDescription>Pick a tech-desk staff member. The ticket becomes theirs and moves to in-progress.</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => submitDialog(e, () => assignTicket(assigning!.id, assignTo), "Ticket assigned", () => setAssigning(null))}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="assignTo">Assign to</Label>
+              <select
+                id="assignTo"
+                value={assignTo}
+                onChange={(e) => setAssignTo(e.target.value)}
+                required
+                className="h-9 w-full appearance-none rounded-lg border border-input bg-card px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {assignStaff.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button type="submit" size="lg" disabled={pending || !assignTo}>
+              {pending ? "Assigning…" : "Assign ticket"}
             </Button>
           </form>
         </DialogContent>

@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireTech, requireUser } from "@/lib/session";
+import { requireTech, requireUser, requireManager } from "@/lib/session";
 import { ticketSchema, solveSchema, forwardSchema, type TicketInput } from "@/lib/validation";
 import { safeErrorMessage } from "@/lib/errors";
 import { titlesSimilar } from "@/lib/duration";
@@ -66,6 +66,19 @@ export async function takeUpTicket(id: string): Promise<Result> {
     status: "TAKEN_UP",
     takenById: user.id,
     takenAt: new Date(),
+  });
+}
+
+/** Manager assigns a ticket to a tech-desk staff member: they become the taker and it moves to in-progress. */
+export async function assignTicket(id: string, staffId: string): Promise<Result> {
+  await requireManager();
+  const staff = await prisma.user.findUnique({ where: { id: staffId }, select: { id: true, tech: true, active: true } });
+  if (!staff || !staff.active || !staff.tech) return { ok: false, error: "Pick an active tech-desk staff member." };
+  return transition(id, ["OPEN", "TAKEN_UP", "FORWARDED"], {
+    status: "TAKEN_UP",
+    takenById: staff.id,
+    takenAt: new Date(),
+    forwardedTo: null,
   });
 }
 

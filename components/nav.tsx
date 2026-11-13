@@ -59,7 +59,8 @@ export async function Board({
   ]);
   const phone = me?.phone ?? null;
   links.push({ href: "/tasks", label: "Tasks", badge: unreadTasks });
-  links.push({ href: "/tickets", label: "Tickets" });
+  links.push({ href: "/tickets", label: "Tickets" }, { href: "/vouchers", label: "Vouchers" });
+  if (u.role === "MANAGER") links.push({ href: "/exams", label: "Exams" });
 
   const initials = u.name
     .split(/\s+/)

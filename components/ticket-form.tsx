@@ -87,7 +87,7 @@ export function TicketForm({ action, onSuccess }: Props) {
       description: String(form.get("description") ?? "") || undefined,
       contactName: String(form.get("contactName") ?? ""),
       contactPhone: String(form.get("contactPhone") ?? ""),
-      branch: String(form.get("branch") ?? "") || undefined,
+      branch: String(form.get("branch") ?? ""),
       source: String(form.get("source") ?? "PHONE") as TicketSource,
       priority: String(form.get("priority") ?? "MEDIUM") as TicketPriority,
       ipAddress: String(form.get("ipAddress") ?? "") || undefined,
@@ -166,8 +166,8 @@ export function TicketForm({ action, onSuccess }: Props) {
         </div>
         <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="branch">Branch {optional}</Label>
-            <Input id="branch" name="branch" />
+            <Label htmlFor="branch">Centre</Label>
+            <Input id="branch" name="branch" required maxLength={120} placeholder="Which centre is this for?" />
           </div>
           <Choice name="source" legend="Came in via" options={TICKET_SOURCES} defaultValue="PHONE" />
         </div>

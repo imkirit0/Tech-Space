@@ -10,6 +10,8 @@ import { ticketNo } from "@/lib/whatsapp";
 import { isTaskOverdue } from "@/lib/tasks";
 import { toManagerRow } from "@/lib/activity-row";
 import { Board } from "@/components/nav";
+import { Pagination } from "@/components/pagination";
+import { pageHref, pageParam, paginate } from "@/lib/paging";
 import { Section, EmptyState } from "@/components/section";
 import { ManagerActivityTable } from "@/components/manager-activity-table";
 import { STATUSES, StatusBadge } from "@/components/status-badge";
@@ -58,7 +60,7 @@ export default async function StaffReportPage({
   // Timestamps (not calendar dates) are compared against the IST day boundaries.
   const stamps = { gte: new Date(`${from}T00:00:00+05:30`), lte: new Date(`${to}T23:59:59.999+05:30`) };
 
-  const [activities, registrations, tasks, tickets] = await Promise.all([
+  const [activities, registrations, tasks, tickets, voucherIssues] = await Promise.all([
     prisma.activity.findMany({
       where: { userId: id, date: days },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -79,9 +81,16 @@ export default async function StaffReportPage({
       },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.voucherEntry.findMany({
+      where: { userId: id, quantity: { lt: 0 }, date: days },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    }),
   ]);
+  const vouchersIssued = voucherIssues.reduce((s, e) => s - e.quantity, 0);
 
   const rows = activities.map(toManagerRow);
+  // Totals below use every row in the period; only the Activities table is paged.
+  const activityPages = paginate(rows, pageParam(sp));
   const hours = rows.reduce((s, r) => s + r.timeTaken, 0);
   const byStatus = STATUSES.map((s) => [s, rows.filter((r) => r.status === s).length] as const).filter(([, n]) => n > 0);
   const completed = rows.filter((r) => r.status === "COMPLETED").length;
@@ -186,8 +195,9 @@ export default async function StaffReportPage({
               </ul>
             </div>
           )}
-          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-4 text-sm sm:grid-cols-4">
+          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-4 text-sm sm:grid-cols-5">
             <Fact label="Exam registrations" value={registered} />
+            <Fact label="Vouchers issued" value={vouchersIssued} />
             <Fact label="Open tasks" value={openTasks.length} note={overdue.length ? `${overdue.length} overdue` : undefined} />
             <Fact label="Tasks finished" value={tasks.length - openTasks.length} />
             <Fact label="Tickets solved" value={solved} />
@@ -223,13 +233,20 @@ export default async function StaffReportPage({
           </Section>
         )}
 
+        <div id="activities" className="scroll-mt-4">
         <Section
           flush
           title="Activities"
           description={`${plural(rows.length, "entry", "entries")}. Click one for its description, timestamps and your comment.`}
         >
-          <ManagerActivityTable rows={rows} />
+          <ManagerActivityTable rows={activityPages.items} />
+          <Pagination
+            window={activityPages}
+            href={(n) => pageHref(`/manager/staff/${id}`, sp, n, { hash: "activities" })}
+            label="Activity pages"
+          />
         </Section>
+        </div>
 
         <Section flush title="Examination registrations" description={periodLabel}>
           {examRows.length === 0 ? (
@@ -248,6 +265,51 @@ export default async function StaffReportPage({
                 <TableRow>
                   <TableCell className="pl-5 font-semibold">Total</TableCell>
                   <TableCell className="pr-5 text-right font-semibold tabular-nums">{registered}</TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          )}
+        </Section>
+
+        <Section flush title="Vouchers issued" description={periodLabel}>
+          {voucherIssues.length === 0 ? (
+            <EmptyState title="No vouchers issued in this period" />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/60 hover:bg-muted/60">
+                  <TableHead className="pl-5">Date</TableHead>
+                  <TableHead>Voucher</TableHead>
+                  <TableHead className="text-right">Issued</TableHead>
+                  <TableHead>Issued to</TableHead>
+                  <TableHead className="pr-5">Note</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {voucherIssues.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="pl-5 text-muted-foreground">{fmtDayLong(dateToISO(e.date))}</TableCell>
+                    <TableCell className="font-medium">{e.voucher}</TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">{-e.quantity}</TableCell>
+                    <TableCell>
+                      {e.issuedTo}
+                      {e.channel && (
+                        <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">{e.channel}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-64 truncate pr-5 text-muted-foreground" title={e.note ?? undefined}>
+                      {e.note || "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell className="pl-5 font-semibold" colSpan={2}>
+                    Total
+                  </TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums">{vouchersIssued}</TableCell>
+                  <TableCell colSpan={2} />
                 </TableRow>
               </TableFooter>
             </Table>

@@ -3,11 +3,17 @@ import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { Board } from "@/components/nav";
 import { Section } from "@/components/section";
+import { Pagination } from "@/components/pagination";
+import { pageHref, pageParam, paginate } from "@/lib/paging";
 import { AddPersonDialog, TeamTable } from "@/components/team-manager";
 
 export const metadata = { title: "Team" };
 
-export default async function TeamPage() {
+export default async function TeamPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
   if (user.role !== "MANAGER") redirect("/dashboard");
@@ -29,6 +35,8 @@ export default async function TeamPage() {
   // Never send hashes to the browser; only whether one exists.
   const members = people.map(({ passwordHash, ...m }) => ({ ...m, hasPassword: !!passwordHash }));
   const active = members.filter((m) => m.active);
+  const params = await searchParams;
+  const pages = paginate(members, pageParam(params));
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -50,7 +58,8 @@ export default async function TeamPage() {
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
         <Section flush title="People" description={`${members.length} ${members.length === 1 ? "account" : "accounts"}`}>
-          <TeamTable members={members} meId={user.id} />
+          <TeamTable members={pages.items} meId={user.id} />
+          <Pagination window={pages} href={(n) => pageHref("/manager/team", params, n)} label="People pages" />
         </Section>
       </main>
     </div>

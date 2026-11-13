@@ -9,13 +9,21 @@ import { Section } from "@/components/section";
 import { AddActivityDialog } from "@/components/add-activity-dialog";
 import { ActivityHistory } from "@/components/activity-history";
 import { MyRegistrations } from "@/components/my-registrations";
+import { MyExamRecords } from "@/components/my-exam-records";
+import { Pagination } from "@/components/pagination";
+import { pageHref, pageParam, paginate } from "@/lib/paging";
 
 export const metadata = { title: "My Activities" };
 
-export default async function ActivitiesPage() {
+export default async function ActivitiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/signin");
   const today = todayISO();
+  const params = await searchParams;
   const month = today.slice(0, 7);
 
   const [activities, locks] = await Promise.all([
@@ -40,6 +48,8 @@ export default async function ActivitiesPage() {
     };
   });
 
+  // Counters above use every row; only the list below is paged.
+  const history = paginate(rows, pageParam(params));
   const thisMonth = rows.filter((r) => r.date.startsWith(month));
   const monthHours = thisMonth.reduce((s, r) => s + r.timeTaken, 0);
   const daysLogged = new Set(thisMonth.map((r) => r.date)).size;
@@ -59,10 +69,24 @@ export default async function ActivitiesPage() {
         ]}
       />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6">
-        <MyRegistrations userId={user.id} today={today} />
-        <Section flush>
-          <ActivityHistory rows={rows} maxDate={today} />
-        </Section>
+        <MyRegistrations
+          userId={user.id}
+          today={today}
+          page={pageParam(params, "regPage")}
+          href={(n) => pageHref("/activities", params, n, { key: "regPage", hash: "registrations" })}
+        />
+        <MyExamRecords
+          userId={user.id}
+          today={today}
+          page={pageParam(params, "examPage")}
+          href={(n) => pageHref("/activities", params, n, { key: "examPage", hash: "exam-records" })}
+        />
+        <div id="history" className="scroll-mt-4">
+          <Section flush>
+            <ActivityHistory rows={history.items} maxDate={today} />
+            <Pagination window={history} href={(n) => pageHref("/activities", params, n, { hash: "history" })} label="Activity history pages" />
+          </Section>
+        </div>
       </main>
     </div>
   );
